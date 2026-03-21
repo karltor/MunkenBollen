@@ -128,3 +128,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .admin-match-card .match-date { font-size: 11px; color: #999; min-width: 60px; }
 .admin-group-btn { padding: 6px 14px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 600; font-size: 13px; }
 .admin-group-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.admin-group-btn.overdue { border-color: #dc3545; color: #dc3545; animation: overdueGlow 2s ease infinite; }
+.admin-group-btn.overdue.active { background: #dc3545; color: white; border-color: #dc3545; }
+@keyframes overdueGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); } 50% { box-shadow: 0 0 0 4px rgba(220,53,69,0.3); } }
+.btn-delete-result { background: none; border: none; color: #dc3545; font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-weight: bold; line-height: 1; }
+.btn-delete-result:hover { background: #fce8e6; }
