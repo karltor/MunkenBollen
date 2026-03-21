@@ -50,6 +50,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .team-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .team-name.home { text-align: left; }
 .team-name.away { text-align: right; }
+.team-name.is-winner { font-weight: 800; color: #28a745; }
+.team-name.is-loser { opacity: 0.45; }
+.team-name.is-draw { color: #6c757d; }
 .score-input { width: 35px; height: 35px; text-align: center; border: 2px solid #ddd; font-weight: bold; font-size: 1.1rem; border-radius: 6px; }
 .score-input:disabled { background: #f0f0f0; color: #999; cursor: not-allowed; border-color: #e0e0e0; }
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
