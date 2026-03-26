@@ -602,9 +602,25 @@ function renderTippersLine(icon, names, suffix, color) {
         const joined = names.length <= 2 ? names.join(' & ') : names.slice(0, -1).join(', ') + ' & ' + names[names.length - 1];
         return `<div style="font-size:12px; color:${color}; margin-top:4px; text-align:center;">${icon} ${joined} ${suffix}</div>`;
     }
+
+    // Skapa en kopia och slumpa ordningen på namnen
+    let displayNames = [...names].sort(() => 0.5 - Math.random());
+    
+    let tooltipText = "";
+    const MAX_NAMES = 10; // Max antal namn att visa i rutan
+    
+    if (displayNames.length > MAX_NAMES) {
+        const selected = displayNames.slice(0, MAX_NAMES);
+        const hiddenCount = displayNames.length - MAX_NAMES;
+        // Ex: "Anna, Bert, Carl (och 12 fler)"
+        tooltipText = selected.join(', ') + ` <br><span style="color:#aaa;">(och ${hiddenCount} fler)</span>`;
+    } else {
+        tooltipText = displayNames.join(', ');
+    }
+
     return `<div class="tipper-hover" style="font-size:12px; color:${color}; margin-top:4px; cursor:default; text-align:center;">
         ${icon} ${names.length} st ${suffix}
-        <span class="tipper-tooltip">${names.join(', ')}</span>
+        <span class="tipper-tooltip">${tooltipText}</span>
     </div>`;
 }
 
