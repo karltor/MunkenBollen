@@ -631,7 +631,7 @@ function renderComparisonTable() {
             // Sektionsrubrik (T.ex. "Grupp A")
             html += `<tr><td colspan="${users.length + 1}" style="background:#e9ecef; font-weight:700; text-align:center; padding:6px; font-size:12px; position:sticky; left:0; z-index:1;">${stage}</td></tr>`;
 
-            groupedMatches[stage].sort((a,b) => a.id.localeCompare(b.id)).forEach(m => {
+        groupedMatches[stage].sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true })).forEach(m => {
                 html += `<tr>`;
                 
                 // Matchinfo (Sticky)
