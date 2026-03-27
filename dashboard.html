@@ -3,13 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MunkenBollen 2026</title>
+    <title>MunkenTipset 2026</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
+    <!-- Welcome popup for first-time users -->
+    <div id="welcome-overlay" class="welcome-overlay" style="display: none;">
+        <div class="welcome-popup">
+            <h2>Välkommen till MunkenTipset!</h2>
+            <p class="welcome-subtitle">
+                Karl och Jonas — en sportnörd och en datornörd (ni får lista ut vem som är vem) — har slagit ihop sina huvuden och skapat MunkenTipset inför VM 2026.
+            </p>
+            <div class="welcome-steps">
+                🎯 <strong>Steg 1:</strong> Tippa alla gruppspelsmatcher<br>
+                🏆 <strong>Steg 2:</strong> Tippa hela slutspelet<br>
+                📊 <strong>Steg 3:</strong> Följ resultat och se hur du ligger till
+            </div>
+            <div class="welcome-tagline">Må bästa munk vinna!</div>
+            <div class="welcome-buttons">
+                <button class="btn-welcome btn-welcome-close" id="welcome-close">Stäng</button>
+                <button class="btn-welcome btn-welcome-dismiss" id="welcome-dismiss">Stäng och visa inte igen</button>
+            </div>
+        </div>
+    </div>
+
     <nav class="navbar">
-        <h1 class="logo-text">MunkenBollen 2026</h1>
+        <h1 class="logo-text">MunkenTipset 2026</h1>
         <div>
             <span id="user-name" style="margin-right: 15px;">Laddar...</span>
             <button id="admin-btn" class="btn btn-admin-toggle" style="display: none;">Admin</button>
@@ -191,13 +211,6 @@
             </div>
         </div>
 
-        <!-- Data Migration -->
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 16px; border: 2px dashed #6f42c1;">
-            <h2 style="margin-top:0; color:#6f42c1;">🔄 Datamigrering</h2>
-            <p style="color:#888; font-size:13px; margin-top:0;">Engångsmigration: kopierar tips från subcollections till användardokument för snabbare laddning.</p>
-            <button class="btn" id="admin-migrate-data" style="background:#6f42c1; font-size:13px;">Migrera tipsdata</button>
-            <div id="admin-migrate-status" style="margin-top:8px; font-size:12px; color:#888;"></div>
-        </div>
         </div>
     </div>
 

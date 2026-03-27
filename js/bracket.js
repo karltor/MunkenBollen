@@ -27,6 +27,15 @@ export async function initBracket(groupPicks) {
 
     allTeamsInRound = buildQualifiedTeams(groupPicks);
 
+    // Attach listeners early — must happen before any early return
+    if (!listenersAttached) {
+        document.getElementById('btn-bracket-save').addEventListener('click', saveBracketRound);
+        document.getElementById('btn-bracket-prev').addEventListener('click', () => {
+            if (currentRound > 0) { currentRound--; loadRound(currentRound); }
+        });
+        listenersAttached = true;
+    }
+
     if (knockoutData.final) { showChampion(knockoutData.final); return; }
 
     currentRound = 0;
@@ -37,14 +46,6 @@ export async function initBracket(groupPicks) {
 
     showBracketContent();
     loadRound(currentRound);
-
-    if (!listenersAttached) {
-        document.getElementById('btn-bracket-save').addEventListener('click', saveBracketRound);
-        document.getElementById('btn-bracket-prev').addEventListener('click', () => {
-            if (currentRound > 0) { currentRound--; loadRound(currentRound); }
-        });
-        listenersAttached = true;
-    }
 }
 
 function showLocked() {

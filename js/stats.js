@@ -33,7 +33,7 @@ let _comparisonState = {
 };
 
 // ── localStorage cache helpers ─────────────────────────────────────────────
-const STATS_CACHE_KEY = 'munkenbollen_stats_cache_v1';
+const STATS_CACHE_KEY = 'munkentipset_stats_cache_v1';
 
 function _loadStatsCache() {
     try {
@@ -226,9 +226,13 @@ export async function loadCommunityStats(prefetchedSettings) {
 
     allPlayedMatches.sort((a, b) => (b._parsed || 0) - (a._parsed || 0));
 
+    // Once knockout has started, only show knockout results
+    const hasKnockoutResults = allPlayedMatches.some(m => m._isKnockout);
+    const relevantMatches = hasKnockoutResults ? allPlayedMatches.filter(m => m._isKnockout) : allPlayedMatches;
+
     // Select last 4: prefer past matches, fallback to future (testing)
-    const pastResults = allPlayedMatches.filter(m => m._parsed && m._parsed <= now);
-    const recentResults = pastResults.length > 0 ? pastResults.slice(0, 4) : allPlayedMatches.slice(0, 4);
+    const pastResults = relevantMatches.filter(m => m._parsed && m._parsed <= now);
+    const recentResults = pastResults.length > 0 ? pastResults.slice(0, 4) : relevantMatches.slice(0, 4);
 
     // ── RECENT RESULTS (4 senaste) ──────────────────────────────
     if (recentResults.length > 0) {
