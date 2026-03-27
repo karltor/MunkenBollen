@@ -8,7 +8,8 @@ import { initAdmin, checkTipsLocked } from './admin.js';
 import { loadResults } from './results.js';
 
 const ADMINS = ['karl.tornered@nyamunken.se', 'jonas.waltelius@nyamunken.se'];
-const MATCHES_CACHE_KEY = 'munkenbollen_matches_cache_v1';
+const MATCHES_CACHE_KEY = 'munkentipset_matches_cache_v1';
+const WELCOME_DISMISSED_KEY = 'munkentipset_welcome_dismissed';
 let allMatchesData = [];
 let isAdmin = false;
 
@@ -103,7 +104,28 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     loadCommunityStats(settings);
+
+    // Show welcome popup for first-time visitors
+    if (!localStorage.getItem(WELCOME_DISMISSED_KEY)) {
+        showWelcomePopup();
+    }
 });
+
+function showWelcomePopup() {
+    const overlay = document.getElementById('welcome-overlay');
+    overlay.style.display = 'flex';
+
+    document.getElementById('welcome-close').addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+    document.getElementById('welcome-dismiss').addEventListener('click', () => {
+        localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
+        overlay.style.display = 'none';
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.style.display = 'none';
+    });
+}
 
 function onGroupsComplete() {
     unlockBracket();

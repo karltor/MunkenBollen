@@ -50,7 +50,6 @@ export async function initAdmin(matchesData) {
         document.getElementById('admin-autofill-ko-final').addEventListener('click', () => autoFillKnockoutRound('Final'));
         document.getElementById('admin-clear-ko-results').addEventListener('click', clearKnockoutResults);
         document.getElementById('admin-clear-ko-teams').addEventListener('click', clearKnockoutTeams);
-        document.getElementById('admin-migrate-data').addEventListener('click', migrateTipsToUserDocs);
         initDone = true;
     }
 }
@@ -912,34 +911,4 @@ export async function checkTipsLocked() {
     const snap = await getDoc(doc(db, "matches", "_settings"));
     const settings = snap.exists() ? snap.data() : {};
     return { locked: settings.tipsLocked === true, settings };
-}
-
-// ─── DATA MIGRATION ─────────────────────────────────
-// One-time migration: copy tips subcollection data into user docs
-async function migrateTipsToUserDocs() {
-    const statusEl = document.getElementById('admin-migrate-status');
-    statusEl.textContent = 'Migrerar data...';
-    const usersSnap = await getDocs(collection(db, "users"));
-    let migrated = 0;
-
-    for (const userDoc of usersSnap.docs) {
-        const userId = userDoc.id;
-        const tipsSnap = await getDocs(collection(db, "users", userId, "tips"));
-        if (tipsSnap.empty) continue;
-
-        const update = { matchTips: {} };
-        tipsSnap.forEach(tipDoc => {
-            if (tipDoc.id === '_groupPicks') update.groupPicks = tipDoc.data();
-            else if (tipDoc.id === '_knockout') update.knockout = tipDoc.data();
-            else if (tipDoc.id === '_profile') update.name = tipDoc.data().name;
-            else update.matchTips[tipDoc.id] = tipDoc.data();
-        });
-
-        await setDoc(doc(db, "users", userId), update, { merge: true });
-        migrated++;
-    }
-
-    await bumpDataVersion();
-    statusEl.textContent = `✓ ${migrated} användare migrerade!`;
-    setTimeout(() => { statusEl.textContent = ''; }, 5000);
 }
