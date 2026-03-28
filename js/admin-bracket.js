@@ -117,16 +117,16 @@ export async function renderAdminBracket() {
     html += `</datalist>`;
 
     const leftRounds = [
-        { key: 'R32', label: 'Åttondelsfinal', start: 0, count: 8 },
-        { key: 'R16', label: 'Sextondelsfinal', start: 0, count: 4 },
+        { key: 'R32', label: 'Sextondelsfinal', start: 0, count: 8 },
+        { key: 'R16', label: 'Åttondelsfinal', start: 0, count: 4 },
         { key: 'KF',  label: 'Kvartsfinal', start: 0, count: 2 },
         { key: 'SF',  label: 'Semifinal', start: 0, count: 1 },
     ];
     const rightRounds = [
         { key: 'SF',  label: 'Semifinal', start: 1, count: 1 },
         { key: 'KF',  label: 'Kvartsfinal', start: 2, count: 2 },
-        { key: 'R16', label: 'Sextondelsfinal', start: 4, count: 4 },
-        { key: 'R32', label: 'Åttondelsfinal', start: 8, count: 8 },
+        { key: 'R16', label: 'Åttondelsfinal', start: 4, count: 4 },
+        { key: 'R32', label: 'Sextondelsfinal', start: 8, count: 8 },
     ];
 
     html += `<div class="abt-tree">`;

@@ -192,10 +192,10 @@ export async function loadCommunityStats(prefetchedSettings) {
         if (me.knockoutPicks) {
             const ko = me.knockoutPicks;
             const koRounds = [
-                { key: 'r32', label: 'Åttondelsfinal' },
-                { key: 'r16', label: 'Kvartsfinal' },
-                { key: 'qf', label: 'Semifinal' },
-                { key: 'sf', label: 'Final' }
+                { key: 'r32', label: 'Sextondelsfinal' },
+                { key: 'r16', label: 'Åttondelsfinal' },
+                { key: 'qf', label: 'Kvartsfinal' },
+                { key: 'sf', label: 'Semifinal' }
             ];
 
             html += `<div style="margin-top:12px; padding-top:10px; border-top:1px solid #eee;">`;
@@ -261,7 +261,7 @@ export async function loadCommunityStats(prefetchedSettings) {
     html += `<div class="dashboard-right">`;
 
     const now = new Date();
-    const roundNames = { 'R32': '32-delsfinal', 'R16': '16-delsfinal', 'KF': 'Kvartsfinal', 'SF': 'Semifinal', 'Final': 'Final' };
+    const roundNames = { 'R32': 'Sextondelsfinal', 'R16': 'Åttondelsfinal', 'KF': 'Kvartsfinal', 'SF': 'Semifinal', 'Final': 'Final' };
 
     // ── Build combined played matches list ──────────
     const allPlayedMatches = [];

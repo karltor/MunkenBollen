@@ -111,16 +111,16 @@ function renderOfficialBracket(bracket) {
     const rd = bracket.rounds || {};
 
     const leftRounds = [
-        { key: 'R32', label: 'Åttondelsfinal', start: 0, count: 8 },
-        { key: 'R16', label: 'Sextondelsfinal', start: 0, count: 4 },
+        { key: 'R32', label: 'Sextondelsfinal', start: 0, count: 8 },
+        { key: 'R16', label: 'Åttondelsfinal', start: 0, count: 4 },
         { key: 'KF',  label: 'Kvartsfinal', start: 0, count: 2 },
         { key: 'SF',  label: 'Semifinal', start: 0, count: 1 },
     ];
     const rightRounds = [
         { key: 'SF',  label: 'Semifinal', start: 1, count: 1 },
         { key: 'KF',  label: 'Kvartsfinal', start: 2, count: 2 },
-        { key: 'R16', label: 'Sextondelsfinal', start: 4, count: 4 },
-        { key: 'R32', label: 'Åttondelsfinal', start: 8, count: 8 },
+        { key: 'R16', label: 'Åttondelsfinal', start: 4, count: 4 },
+        { key: 'R32', label: 'Sextondelsfinal', start: 8, count: 8 },
     ];
 
     let html = `<div style="background: linear-gradient(135deg, #1f1f3a, #2b2b52); border-radius: 16px; padding: 20px; overflow-x: auto;">`;

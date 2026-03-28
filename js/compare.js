@@ -234,10 +234,10 @@ function renderSimpleView(users) {
 function renderKnockoutView(users) {
     let html = '';
     const koRoundDefs = [
-        { key: 'r32', label: 'Åttondelsfinal (16 lag)' },
-        { key: 'r16', label: 'Kvartsfinal (8 lag)' },
-        { key: 'qf', label: 'Semifinal (4 lag)' },
-        { key: 'sf', label: 'Final (2 lag)' },
+        { key: 'r32', label: 'Sextondelsfinal (16 lag)' },
+        { key: 'r16', label: 'Åttondelsfinal (8 lag)' },
+        { key: 'qf', label: 'Kvartsfinal (4 lag)' },
+        { key: 'sf', label: 'Semifinal (2 lag)' },
         { key: 'final', label: '🏆 VM-mästare' }
     ];
 
