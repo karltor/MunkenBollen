@@ -501,7 +501,9 @@ export async function loadCommunityStats(prefetchedSettings) {
     window._allPicks = users.map(u => ({ userId: u.userId, name: u.name, picks: u.groupPicks || {} }));
 
     // Update compare module state
-    initCompareState(users, scores, scoring, loadCommunityStats);
+    initCompareState(users, scores, scoring, loadCommunityStats, {
+        results, bracket, officialGroupStandings
+    });
 
     // Wire buttons
     const fullLbBtn = document.getElementById('btn-full-leaderboard');
