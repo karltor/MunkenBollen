@@ -1,5 +1,6 @@
 import { auth } from './config.js';
 import { f } from './wizard.js';
+import { sign } from './scoring.js';
 
 const GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
@@ -13,12 +14,20 @@ let _cachedUsers = null;
 let _cachedScores = null;
 let _cachedScoring = null;
 let _loadCommunityStats = null;
+let _cachedResults = null;
+let _cachedBracket = null;
+let _cachedOfficialGroupStandings = null;
 
-export function initCompareState(users, scores, scoring, loadFn) {
+export function initCompareState(users, scores, scoring, loadFn, extra) {
     _cachedUsers = users;
     _cachedScores = scores;
     _cachedScoring = scoring;
     _loadCommunityStats = loadFn;
+    if (extra) {
+        _cachedResults = extra.results || null;
+        _cachedBracket = extra.bracket || null;
+        _cachedOfficialGroupStandings = extra.officialGroupStandings || null;
+    }
 }
 
 // ── FULL LEADERBOARD VIEW ──────────────────────────
@@ -198,16 +207,24 @@ function renderComparisonTable() {
 
 function renderSimpleView(users) {
     let html = '';
+    const official = _cachedOfficialGroupStandings || {};
+
     GROUP_LETTERS.forEach(letter => {
+        const og = official[letter];
         html += `<tr>`;
         html += `<td style="font-weight:700; position:sticky; left:0; background:#f4f7f6; z-index:1; border-right:2px solid #ddd; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">Grupp ${letter}</td>`;
         users.forEach(u => {
             const picks = u.groupPicks ? u.groupPicks[letter] : null;
             if (picks && picks.first && picks.second) {
+                let firstStyle = '', secondStyle = '';
+                if (og && og.complete) {
+                    firstStyle = picks.first === og.first ? 'color:#28a745;' : 'color:#dc3545;';
+                    secondStyle = picks.second === og.second ? 'color:#28a745;' : 'color:#dc3545;';
+                }
                 html += `<td style="background:white;">
                     <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start; padding-left:10px;">
-                        <span style="white-space:nowrap;" title="Etta">🥇 ${f(picks.first)}${picks.first}</span>
-                        <span style="white-space:nowrap; color:#555;" title="Tvåa">🥈 ${f(picks.second)}${picks.second}</span>
+                        <span style="white-space:nowrap; ${firstStyle}" title="Etta">🥇 ${f(picks.first)}${picks.first}</span>
+                        <span style="white-space:nowrap; ${secondStyle}" title="Tvåa">🥈 ${f(picks.second)}${picks.second}</span>
                     </div>
                 </td>`;
             } else {
@@ -217,12 +234,22 @@ function renderSimpleView(users) {
         html += `</tr>`;
     });
 
+    // Champion row with color-coding
+    const finalWinners = [];
+    if (_cachedBracket?.rounds?.Final) {
+        _cachedBracket.rounds.Final.forEach(m => { if (m.winner) finalWinners.push(m.winner); });
+    }
+
     html += `<tr>`;
     html += `<td style="font-weight:700; position:sticky; left:0; background:#fffdf5; z-index:1; border-right:2px solid #ddd; color:#d4a017; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">🏆 VM-mästare</td>`;
     users.forEach(u => {
         const fin = u.knockoutPicks?.final;
         if (fin) {
-            html += `<td style="background:#fffdf5; font-weight:700; color:#d4a017;">${f(fin)}${fin}</td>`;
+            let champColor = 'color:#d4a017;';
+            if (finalWinners.length > 0) {
+                champColor = finalWinners.includes(fin) ? 'color:#28a745;' : 'color:#dc3545;';
+            }
+            html += `<td style="background:#fffdf5; font-weight:700; ${champColor}">${f(fin)}${fin}</td>`;
         } else {
             html += `<td style="background:#fffdf5; color:#ccc; text-align:center;">-</td>`;
         }
@@ -234,14 +261,28 @@ function renderSimpleView(users) {
 function renderKnockoutView(users) {
     let html = '';
     const koRoundDefs = [
-        { key: 'r32', label: 'Sextondelsfinal (16 lag)' },
-        { key: 'r16', label: 'Åttondelsfinal (8 lag)' },
-        { key: 'qf', label: 'Kvartsfinal (4 lag)' },
-        { key: 'sf', label: 'Semifinal (2 lag)' },
-        { key: 'final', label: '🏆 VM-mästare' }
+        { key: 'r32', bracketKey: 'R32', label: 'Sextondelsfinal (16 lag)' },
+        { key: 'r16', bracketKey: 'R16', label: 'Åttondelsfinal (8 lag)' },
+        { key: 'qf', bracketKey: 'KF', label: 'Kvartsfinal (4 lag)' },
+        { key: 'sf', bracketKey: 'SF', label: 'Semifinal (2 lag)' },
+        { key: 'final', bracketKey: 'Final', label: '🏆 VM-mästare' }
     ];
 
+    // Build official winners per round
+    const officialWinners = {};
+    if (_cachedBracket?.rounds) {
+        koRoundDefs.forEach(rd => {
+            officialWinners[rd.key] = [];
+            (_cachedBracket.rounds[rd.bracketKey] || []).forEach(m => {
+                if (m.winner) officialWinners[rd.key].push(m.winner);
+            });
+        });
+    }
+
     koRoundDefs.forEach(round => {
+        const winners = officialWinners[round.key] || [];
+        const hasResults = winners.length > 0;
+
         html += `<tr><td colspan="${users.length + 1}" style="background:#1f1f3a; color:#ffc107; font-weight:700; text-align:center; padding:8px; font-size:13px; position:sticky; left:0; z-index:1;">${round.label}</td></tr>`;
 
         const teamPickCount = {};
@@ -274,9 +315,18 @@ function renderKnockoutView(users) {
                 shownDivider = true;
                 html += `<tr><td colspan="${users.length + 1}" style="background:#2b2b52; color:#aaa; text-align:center; font-size:11px; padding:4px; font-style:italic;">Skiljer sig</td></tr>`;
             }
+
+            // Color-code the team label if results exist
+            const teamCorrect = hasResults && winners.includes(team);
+            const teamWrong = hasResults && !winners.includes(team);
+            let labelBg = isShared ? '#e8f5e9' : '#f4f7f6';
+            let labelColor = '';
+            if (teamCorrect) { labelBg = '#e8f5e9'; labelColor = 'color:#28a745;'; }
+            else if (teamWrong) { labelBg = '#fce8e6'; labelColor = 'color:#dc3545;'; }
+
             const rowBg = isShared ? '#f0faf0' : 'white';
             html += `<tr>`;
-            html += `<td style="font-weight:600; position:sticky; left:0; background:${isShared ? '#e8f5e9' : '#f4f7f6'}; z-index:1; border-right:2px solid #ddd; box-shadow: 2px 0 5px rgba(0,0,0,0.05); white-space:nowrap; font-size:12px;">${f(team)}${team}</td>`;
+            html += `<td style="font-weight:600; position:sticky; left:0; background:${labelBg}; ${labelColor} z-index:1; border-right:2px solid #ddd; box-shadow: 2px 0 5px rgba(0,0,0,0.05); white-space:nowrap; font-size:12px;">${f(team)}${team}</td>`;
 
             users.forEach(u => {
                 if (!u.knockoutPicks) { html += `<td style="background:${rowBg}; text-align:center; color:#ccc;">-</td>`; return; }
@@ -285,7 +335,15 @@ function renderKnockoutView(users) {
                     : (u.knockoutPicks[round.key] || []).includes(team);
 
                 if (hasPick) {
-                    html += `<td style="background:${isShared ? '#e8f5e9' : '#fff8e1'}; text-align:center; font-size:16px;">${isShared ? '✅' : '⚡'}</td>`;
+                    if (hasResults) {
+                        if (teamCorrect) {
+                            html += `<td style="background:#e8f5e9; text-align:center; font-size:16px;">✅</td>`;
+                        } else {
+                            html += `<td style="background:#fce8e6; text-align:center; font-size:16px;">❌</td>`;
+                        }
+                    } else {
+                        html += `<td style="background:${isShared ? '#e8f5e9' : '#fff8e1'}; text-align:center; font-size:16px;">${isShared ? '✅' : '⚡'}</td>`;
+                    }
                 } else {
                     html += `<td style="background:${rowBg}; text-align:center; color:#e0e0e0;">–</td>`;
                 }
@@ -299,6 +357,7 @@ function renderKnockoutView(users) {
 function renderAdvancedView(users) {
     let html = '';
     const matchDocs = window._cachedMatchDocs || [];
+    const results = _cachedResults || {};
 
     const groupedMatches = {};
     matchDocs.forEach(m => {
@@ -317,8 +376,16 @@ function renderAdvancedView(users) {
         html += `<tr><td colspan="${users.length + 1}" style="background:#e9ecef; font-weight:700; text-align:center; padding:6px; font-size:12px; position:sticky; left:0; z-index:1;">${stage}</td></tr>`;
 
         groupedMatches[stage].sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true })).forEach(m => {
+            const r = results[m.id];
+            const hasResult = r && r.homeScore !== undefined;
+
             html += `<tr>`;
 
+            // Match cell with actual result if available
+            let resultLabel = '';
+            if (hasResult) {
+                resultLabel = `<div style="font-size:11px; font-weight:800; color:#333; margin-top:2px;">${r.homeScore} - ${r.awayScore}</div>`;
+            }
             html += `<td class="compare-match-cell" style="position:sticky; left:0; background:#f4f7f6; z-index:1; border-right:2px solid #ddd; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
                 <div class="compare-match-date">${m.date || ''}</div>
                 <div class="compare-match-teams">
@@ -326,12 +393,21 @@ function renderAdvancedView(users) {
                     <span class="compare-team-sep">-</span>
                     <span class="compare-team-name">${m.awayTeam}</span><span class="compare-team-flag">${f(m.awayTeam)}</span>
                 </div>
+                ${resultLabel}
             </td>`;
 
             users.forEach(u => {
                 const tip = u.matchTips ? u.matchTips[m.id] : null;
                 if (tip && tip.homeScore !== undefined) {
-                    html += `<td style="font-size:16px; font-weight:800; text-align:center; background:white;">
+                    let bg = 'white', color = '';
+                    if (hasResult) {
+                        const exact = tip.homeScore === r.homeScore && tip.awayScore === r.awayScore;
+                        const rightWinner = !exact && sign(tip.homeScore - tip.awayScore) === sign(r.homeScore - r.awayScore);
+                        if (exact) { bg = '#e8f5e9'; color = 'color:#28a745;'; }
+                        else if (rightWinner) { bg = '#e3f2fd'; color = 'color:#1976d2;'; }
+                        else { bg = '#fce8e6'; color = 'color:#dc3545;'; }
+                    }
+                    html += `<td style="font-size:16px; font-weight:800; text-align:center; background:${bg}; ${color}">
                         ${tip.homeScore} - ${tip.awayScore}
                     </td>`;
                 } else {
