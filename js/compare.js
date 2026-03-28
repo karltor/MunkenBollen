@@ -381,19 +381,16 @@ function renderAdvancedView(users) {
 
             html += `<tr>`;
 
-            // Match cell with actual result if available
-            let resultLabel = '';
-            if (hasResult) {
-                resultLabel = `<div style="font-size:11px; font-weight:800; color:#333; margin-top:2px;">${r.homeScore} - ${r.awayScore}</div>`;
-            }
+            const scorePart = hasResult
+                ? `<span style="font-weight:800; padding:0 6px; min-width:36px; text-align:center;">${r.homeScore} - ${r.awayScore}</span>`
+                : `<span class="compare-team-sep">-</span>`;
             html += `<td class="compare-match-cell" style="position:sticky; left:0; background:#f4f7f6; z-index:1; border-right:2px solid #ddd; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
                 <div class="compare-match-date">${m.date || ''}</div>
                 <div class="compare-match-teams">
                     <span class="compare-team-flag">${f(m.homeTeam)}</span><span class="compare-team-name">${m.homeTeam}</span>
-                    <span class="compare-team-sep">-</span>
+                    ${scorePart}
                     <span class="compare-team-name">${m.awayTeam}</span><span class="compare-team-flag">${f(m.awayTeam)}</span>
                 </div>
-                ${resultLabel}
             </td>`;
 
             users.forEach(u => {
