@@ -157,7 +157,7 @@ function renderSection(title, teams, showGroup) {
 }
 
 function fLarge(t) {
-    return flags[t] ? `<img src="https://flagcdn.com/32x24/${flags[t]}.png" style="vertical-align:middle; margin-right:10px; border-radius:2px;" width="32" height="24" alt="">` : '🌍 ';
+    return flags[t] ? `<img src="https://flagcdn.com/40x30/${flags[t]}.png" style="vertical-align:-5px; margin-right:10px; border-radius:2px;" width="40" height="30" alt="">` : '🌍 ';
 }
 
 window.toggleBracketTeam = function (team) {
