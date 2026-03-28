@@ -5,10 +5,10 @@ import { invalidateStatsCache } from './stats.js';
 
 const ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'];
 const ROUND_LABELS = {
-    r32: 'Välj 16 lag som går vidare till åttondelsfinal',
-    r16: 'Välj 8 lag som går vidare till kvartsfinal',
-    qf: 'Välj 4 lag som går vidare till semifinal',
-    sf: 'Välj 2 lag som går vidare till final',
+    r32: 'Välj 16 lag som går vidare till sextondelsfinal',
+    r16: 'Välj 8 lag som går vidare till åttondelsfinal',
+    qf: 'Välj 4 lag som går vidare till kvartsfinal',
+    sf: 'Välj 2 lag som går vidare till semifinal',
     final: 'Vilket lag vinner VM 2026?'
 };
 const ROUND_PICK_COUNT = { r32: 16, r16: 8, qf: 4, sf: 2, final: 1 };
