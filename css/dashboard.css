@@ -285,97 +285,125 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 }
 .abt-score:focus { outline: none; background: #fff8e1; }
 
-/* Match wrapper with connectors */
+/* ── Results bracket (br-*) ─────────────────────────── */
+.br-tree {
+    display: flex;
+    align-items: stretch;
+    overflow-x: auto;
+    padding: 10px 0 20px;
+    min-height: 600px;
+    gap: 0;
+}
+.br-round {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-width: 180px;
+}
+.br-round-label {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+    padding: 4px 0 8px;
+    white-space: nowrap;
+}
+.br-final-label { color: #d4a017 !important; font-size: 13px !important; }
+.br-round-matches {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+.br-slot { position: relative; padding: 4px 0; }
+.br-left { padding-right: 20px; }
+.br-right { padding-left: 20px; }
+.br-final-round { padding: 0 20px; }
+.br-final-round .abt-match {
+    border: 2px solid #d4a017;
+    box-shadow: 0 2px 8px rgba(212,160,23,0.2);
+}
+
+/* ── Pair wrapper: groups two matches and draws connectors ── */
+.br-pair {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+.br-pair .br-slot { flex: 1; display: flex; align-items: center; }
+
+/* LEFT pairs: horizontal lines from each match going right, vertical bar on the right, outgoing line */
+.br-pair-left .br-slot::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    width: 20px;
+    border-top: 2px solid rgba(255,255,255,0.25);
+}
+.br-pair-left::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 25%;
+    height: 50%;
+    border-right: 2px solid rgba(255,255,255,0.25);
+}
+/* Single slot (SF left): just a horizontal line right */
+.br-left .br-conn-left::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    width: 20px;
+    border-top: 2px solid rgba(255,255,255,0.25);
+}
+
+/* RIGHT pairs: horizontal lines from each match going left, vertical bar on the left, outgoing line */
+.br-pair-right .br-slot::after {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    width: 20px;
+    border-top: 2px solid rgba(255,255,255,0.25);
+}
+.br-pair-right::after {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 25%;
+    height: 50%;
+    border-left: 2px solid rgba(255,255,255,0.25);
+}
+/* Single slot (SF right): just a horizontal line left */
+.br-right .br-conn-right::after {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    width: 20px;
+    border-top: 2px solid rgba(255,255,255,0.25);
+}
+
+/* ── Admin bracket keeps old abt-* classes (unchanged) ── */
 .abt-match-wrapper {
     position: relative;
     display: flex;
     align-items: center;
 }
-
-/* Left side connectors: line going RIGHT from match to next round */
-.abt-round-left .abt-match-wrapper::after {
-    content: '';
-    position: absolute;
-    right: -16px;
-    top: 50%;
-    width: 16px;
-    height: 0;
-    border-top: 2px solid #ccc;
-}
-/* Vertical connector on left side: pairs of matches connect */
-.abt-round-left .abt-mw-d0:nth-child(odd)::before {
-    content: '';
-    position: absolute;
-    right: -16px;
-    top: 50%;
-    height: calc(100% + 4px);
-    border-right: 2px solid #ccc;
-}
-.abt-round-left .abt-mw-d1:nth-child(odd)::before {
-    content: '';
-    position: absolute;
-    right: -16px;
-    top: 50%;
-    height: calc(100% + 4px);
-    border-right: 2px solid #ccc;
-}
-.abt-round-left .abt-mw-d2:nth-child(odd)::before {
-    content: '';
-    position: absolute;
-    right: -16px;
-    top: 50%;
-    height: calc(100% + 4px);
-    border-right: 2px solid #ccc;
-}
-
-/* Right side connectors: line going LEFT from match */
-.abt-round-right .abt-match-wrapper::after {
-    content: '';
-    position: absolute;
-    left: -16px;
-    top: 50%;
-    width: 16px;
-    height: 0;
-    border-top: 2px solid #ccc;
-}
-.abt-round-right .abt-mw-d0:nth-child(odd)::before {
-    content: '';
-    position: absolute;
-    left: -16px;
-    top: 50%;
-    height: calc(100% + 4px);
-    border-left: 2px solid #ccc;
-}
-.abt-round-right .abt-mw-d1:nth-child(odd)::before {
-    content: '';
-    position: absolute;
-    left: -16px;
-    top: 50%;
-    height: calc(100% + 4px);
-    border-left: 2px solid #ccc;
-}
-.abt-round-right .abt-mw-d2:nth-child(odd)::before {
-    content: '';
-    position: absolute;
-    left: -16px;
-    top: 50%;
-    height: calc(100% + 4px);
-    border-left: 2px solid #ccc;
-}
-
-/* Spacing between rounds */
 .abt-round-left { padding-right: 16px; }
 .abt-round-right { padding-left: 16px; }
 .abt-round-final { padding: 0 16px; }
-
-/* Final match styling */
 .abt-round-final .abt-match {
     border: 2px solid #d4a017;
     box-shadow: 0 2px 8px rgba(212,160,23,0.2);
 }
 .abt-mw-final { justify-content: center; }
-
-/* Depth-specific widths (narrower for later rounds) */
 .abt-depth-0 { min-width: 186px; }
 .abt-depth-1 { min-width: 186px; }
 .abt-depth-2 { min-width: 186px; }

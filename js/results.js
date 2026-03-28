@@ -124,48 +124,58 @@ function renderOfficialBracket(bracket) {
     ];
 
     let html = `<div style="background: linear-gradient(135deg, #1f1f3a, #2b2b52); border-radius: 16px; padding: 20px; overflow-x: auto;">`;
-    html += `<div class="abt-tree">`;
+    html += `<div class="br-tree">`;
 
     // Left half
     leftRounds.forEach((round, ri) => {
-        html += `<div class="abt-round abt-round-left abt-depth-${ri}">`;
-        html += `<div class="abt-round-label">${round.label}</div>`;
-        html += `<div class="abt-round-matches">`;
-        for (let i = 0; i < round.count; i++) {
-            const m = (rd[round.key] || [])[round.start + i] || {};
-            html += `<div class="abt-match-wrapper abt-mw-d${ri}">`;
-            html += renderBracketMatch(m);
-            html += `</div>`;
-        }
+        html += `<div class="br-round br-left">`;
+        html += `<div class="br-round-label">${round.label}</div>`;
+        html += `<div class="br-round-matches">`;
+        html += buildPairedMatches(rd, round, ri, 'left');
         html += `</div></div>`;
     });
 
     // Final (center)
     const finalMatch = (rd['Final'] || [])[0] || {};
-    html += `<div class="abt-round abt-round-final">`;
-    html += `<div class="abt-round-label abt-final-label">FINAL</div>`;
-    html += `<div class="abt-round-matches">`;
-    html += `<div class="abt-match-wrapper abt-mw-final">`;
-    html += renderBracketMatch(finalMatch, true);
-    html += `</div>`;
+    html += `<div class="br-round br-final-round">`;
+    html += `<div class="br-round-label br-final-label">FINAL</div>`;
+    html += `<div class="br-round-matches">`;
+    html += `<div class="br-slot">${renderBracketMatch(finalMatch, true)}</div>`;
     html += `</div></div>`;
 
     // Right half (mirrored)
     rightRounds.forEach((round, ri) => {
         const depth = 3 - ri;
-        html += `<div class="abt-round abt-round-right abt-depth-${depth}">`;
-        html += `<div class="abt-round-label">${round.label}</div>`;
-        html += `<div class="abt-round-matches">`;
-        for (let i = 0; i < round.count; i++) {
-            const m = (rd[round.key] || [])[round.start + i] || {};
-            html += `<div class="abt-match-wrapper abt-mw-d${depth}">`;
-            html += renderBracketMatch(m);
-            html += `</div>`;
-        }
+        html += `<div class="br-round br-right">`;
+        html += `<div class="br-round-label">${round.label}</div>`;
+        html += `<div class="br-round-matches">`;
+        html += buildPairedMatches(rd, round, depth, 'right');
         html += `</div></div>`;
     });
 
     html += `</div></div>`;
+    return html;
+}
+
+function buildPairedMatches(rd, round, depth, side) {
+    const matches = [];
+    for (let i = 0; i < round.count; i++) {
+        matches.push((rd[round.key] || [])[round.start + i] || {});
+    }
+    // If only 1 match, no pairing needed — just a single slot with connector
+    if (matches.length === 1) {
+        return `<div class="br-slot br-conn-${side}">${renderBracketMatch(matches[0])}</div>`;
+    }
+    // Wrap matches in pairs: [0,1], [2,3], etc.
+    let html = '';
+    for (let i = 0; i < matches.length; i += 2) {
+        html += `<div class="br-pair br-pair-${side}">`;
+        html += `<div class="br-slot">${renderBracketMatch(matches[i])}</div>`;
+        if (i + 1 < matches.length) {
+            html += `<div class="br-slot">${renderBracketMatch(matches[i + 1])}</div>`;
+        }
+        html += `</div>`;
+    }
     return html;
 }
 
