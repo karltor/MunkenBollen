@@ -7,6 +7,7 @@ import { loadCommunityStats } from './stats.js';
 import { initAdmin, checkTipsLocked } from './admin.js';
 import { loadResults } from './results.js';
 import { applyStoredTheme } from './admin-theme.js';
+import { loadEmailPref, showEmailPrefPopup, initSettingsTab } from './user-settings.js';
 
 // Apply saved theme immediately before anything renders
 applyStoredTheme();
@@ -51,6 +52,22 @@ document.getElementById('admin-btn').addEventListener('click', () => {
     } else {
         adminTab.classList.add('active');
         if (allMatchesData.length > 0) initAdmin(allMatchesData);
+    }
+});
+
+// Settings button → toggle settings tab
+document.getElementById('settings-btn').addEventListener('click', () => {
+    const settingsTab = document.getElementById('settings-tab');
+    const isShown = settingsTab.classList.contains('active');
+
+    document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+
+    if (isShown) {
+        document.querySelector('.tab-btn[data-target="start-tab"]').classList.add('active');
+        document.getElementById('start-tab').classList.add('active');
+    } else {
+        settingsTab.classList.add('active');
+        initSettingsTab();
     }
 });
 
@@ -116,25 +133,52 @@ onAuthStateChanged(auth, async (user) => {
 
     loadCommunityStats(settings);
 
-    // Show welcome popup for first-time visitors
+    // Show welcome popup for first-time visitors, or email pref if not set
+    const emailPref = await loadEmailPref();
     if (!localStorage.getItem(WELCOME_DISMISSED_KEY)) {
-        showWelcomePopup();
+        showWelcomePopup(emailPref);
+    } else if (!emailPref) {
+        // Welcome already dismissed but email pref never set — show just the email popup
+        showEmailPrefOnly();
     }
 });
 
-function showWelcomePopup() {
+function showEmailPrefOnly() {
+    const overlay = document.getElementById('welcome-overlay');
+    const welcomeCard = document.getElementById('welcome-popup-card');
+    welcomeCard.style.display = 'none';
+    overlay.style.display = 'flex';
+    showEmailPrefPopup();
+}
+
+function showWelcomePopup(emailPref) {
     const overlay = document.getElementById('welcome-overlay');
     overlay.style.display = 'flex';
 
-    document.getElementById('welcome-close').addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
-    document.getElementById('welcome-dismiss').addEventListener('click', () => {
+    function closeWelcome(dismiss) {
+        if (dismiss) localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
+
+        // If email pref already set, just close
+        if (emailPref) {
+            overlay.style.display = 'none';
+            return;
+        }
+
+        // Slide welcome out, slide email pref in
+        const welcomeCard = document.getElementById('welcome-popup-card');
+        welcomeCard.classList.add('popup-slide-out');
+        setTimeout(() => {
+            welcomeCard.style.display = 'none';
+            showEmailPrefPopup();
+        }, 350);
+        // Also dismiss welcome so it won't show again
         localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
-        overlay.style.display = 'none';
-    });
+    }
+
+    document.getElementById('welcome-close').addEventListener('click', () => closeWelcome(false));
+    document.getElementById('welcome-dismiss').addEventListener('click', () => closeWelcome(true));
     overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.style.display = 'none';
+        if (e.target === overlay) closeWelcome(false);
     });
 }
 

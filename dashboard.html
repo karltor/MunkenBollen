@@ -11,7 +11,7 @@
 <body>
     <!-- Welcome popup for first-time users -->
     <div id="welcome-overlay" class="welcome-overlay" style="display: none;">
-        <div class="welcome-popup">
+        <div class="welcome-popup" id="welcome-popup-card">
             <h2>Välkommen till MunkenTipset!</h2>
             <p class="welcome-subtitle">
                 Karl och Jonas — en sportnörd och en datornörd (ni får lista ut vem som är vem) — har slagit ihop sina huvuden och skapat MunkenTipset inför VM 2026.
@@ -27,12 +27,37 @@
                 <button class="btn-welcome btn-welcome-dismiss" id="welcome-dismiss">Stäng och visa inte igen</button>
             </div>
         </div>
+        <div class="welcome-popup email-pref-popup" id="email-pref-card" style="display:none;">
+            <h2>Mejluppdateringar under VM</h2>
+            <p class="welcome-subtitle">
+                Vi skickar ut roliga sammanställningar om hur det går i VM och tipsandet. Hur ofta vill du få mejl?
+            </p>
+            <div class="email-pref-options">
+                <button class="email-pref-btn" data-pref="often">
+                    <span class="email-pref-icon">📬</span>
+                    <strong>Ofta</strong>
+                    <span class="email-pref-desc">Uppdateringar, highlights, hur tipset går och ögonväckande händelser</span>
+                </button>
+                <button class="email-pref-btn" data-pref="few">
+                    <span class="email-pref-icon">📩</span>
+                    <strong>Några få</strong>
+                    <span class="email-pref-desc">Sammanställning mitt i, efter gruppspel, semifinal och när allt är klart</span>
+                </button>
+                <button class="email-pref-btn" data-pref="none">
+                    <span class="email-pref-icon">🔕</span>
+                    <strong>Inga mejl</strong>
+                    <span class="email-pref-desc">Jag kollar hemsidan själv</span>
+                </button>
+            </div>
+            <p style="font-size:11px; color:#888; margin-top:16px;">Du kan ändra detta när som helst under Inställningar</p>
+        </div>
     </div>
 
     <nav class="navbar">
         <h1 class="logo-text">MunkenTipset 2026</h1>
         <div>
             <span id="user-name" style="margin-right: 15px;">Laddar...</span>
+            <button id="settings-btn" class="btn btn-settings" title="Inställningar">⚙</button>
             <button id="admin-btn" class="btn btn-admin-toggle" style="display: none;">Admin</button>
             <button id="logout-btn" class="btn btn-logout">Logga ut</button>
         </div>
@@ -126,6 +151,23 @@
             </div>
             <div id="results-groups" class="results-sub-content active"></div>
             <div id="results-knockout" class="results-sub-content"></div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="settings-tab" class="tab-content">
+            <div class="stat-card" style="max-width:600px; margin:0 auto;">
+                <h2 style="margin-top:0;">Inställningar</h2>
+                <div class="admin-section" style="margin-bottom:16px;">
+                    <h4 style="margin:0 0 10px; font-size:14px;">Mejluppdateringar under VM</h4>
+                    <p style="font-size:12px; color:#666; margin:0 0 12px;">Hur ofta vill du få mejl med uppdateringar om matcher, tips och leaderboard?</p>
+                    <div id="settings-email-pref" style="display:flex; flex-direction:column; gap:8px;">
+                        <label class="settings-radio"><input type="radio" name="email-pref" value="often"> <strong>Ofta</strong> — Uppdateringar, highlights, ögonväckare</label>
+                        <label class="settings-radio"><input type="radio" name="email-pref" value="few"> <strong>Några få</strong> — Mitt i, efter gruppspel, semifinal, slutet</label>
+                        <label class="settings-radio"><input type="radio" name="email-pref" value="none"> <strong>Inga mejl</strong> — Jag kollar hemsidan själv</label>
+                    </div>
+                    <button class="btn" id="settings-save-email-pref" style="margin-top:12px; width:100%;">Spara</button>
+                </div>
+            </div>
         </div>
 
         <!-- ADMIN TAB -->
@@ -250,6 +292,23 @@
                         <h3 style="margin-top:0;">Utkast</h3>
                         <div id="admin-email-preview" style="font-size:14px; line-height:1.7;"></div>
                     </div>
+                </div>
+                <div class="admin-card" style="margin-top:16px;">
+                    <h3 style="margin-top:0;">Mejllistor</h3>
+                    <p style="color:#666; font-size:13px; margin:0 0 12px;">Exportera mejladresser baserat på användarnas mejlpreferens.</p>
+                    <div class="admin-top-grid">
+                        <div class="admin-section">
+                            <h4 style="margin:0 0 6px; font-size:14px;">📬 Ofta <span id="email-list-often-count" style="color:#888; font-weight:400;">(0)</span></h4>
+                            <textarea id="email-list-often" readonly style="width:100%; height:80px; font-size:12px; font-family:monospace; padding:8px; border:1px solid #ddd; border-radius:6px; resize:vertical;"></textarea>
+                            <button class="btn email-list-copy" data-target="email-list-often" style="margin-top:6px; width:100%; background:#17a2b8; font-size:12px;">Kopiera</button>
+                        </div>
+                        <div class="admin-section">
+                            <h4 style="margin:0 0 6px; font-size:14px;">📩 Några få <span id="email-list-few-count" style="color:#888; font-weight:400;">(0)</span></h4>
+                            <textarea id="email-list-few" readonly style="width:100%; height:80px; font-size:12px; font-family:monospace; padding:8px; border:1px solid #ddd; border-radius:6px; resize:vertical;"></textarea>
+                            <button class="btn email-list-copy" data-target="email-list-few" style="margin-top:6px; width:100%; background:#17a2b8; font-size:12px;">Kopiera</button>
+                        </div>
+                    </div>
+                    <button class="btn" id="admin-load-email-lists" style="margin-top:10px; width:100%; background:#6c757d; font-size:13px;">Ladda mejllistor</button>
                 </div>
             </div>
 
