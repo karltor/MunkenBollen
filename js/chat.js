@@ -219,10 +219,13 @@ function renderMessages() {
         // Admin delete button
         const adminX = adminMode ? `<button class="chat-msg-admin-x" data-msg-id="${m.id}" title="Ta bort">&times;</button>` : '';
 
+        // XSS FIX: Escape the display name so malicious names don't execute script tags
+        const safeDisplayName = escapeHtml(displayName);
+
         // Admin: clickable name
         const nameHtml = adminMode
-            ? `<span class="chat-msg-name" style="cursor:pointer; text-decoration:underline dotted;" data-uid="${m.uid}" data-action="user-menu">${displayName}</span>`
-            : `<span class="chat-msg-name">${displayName}</span>`;
+            ? `<span class="chat-msg-name" style="cursor:pointer; text-decoration:underline dotted;" data-uid="${m.uid}" data-action="user-menu">${safeDisplayName}</span>`
+            : `<span class="chat-msg-name">${safeDisplayName}</span>`;
 
         html += `<div class="${classes.join(' ')}" data-msg-id="${m.id}">
             <div class="chat-msg-header">
