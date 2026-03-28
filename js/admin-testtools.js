@@ -83,6 +83,7 @@ export async function addFakeTeachers() {
     }
 
     fakeNameIdx += 10;
+    await bumpDataVersion();
     statusEl.textContent = `✓ 10 fejklärare tillagda! (${fakeNameIdx} totalt)`;
     setTimeout(() => { statusEl.textContent = ''; }, 4000);
 }
@@ -112,6 +113,7 @@ export async function removeFakeTeachers() {
     }
 
     fakeNameIdx = 0;
+    await bumpDataVersion();
     statusEl.textContent = `✓ ${removed} fejklärare borttagna!`;
     setTimeout(() => { statusEl.textContent = ''; }, 4000);
 }
