@@ -173,13 +173,13 @@ if (me && me.groupPicks) {
         html += `<h3 style="margin-top:20px;">Min tipsrad</h3>`;
         html += `<div class="stat-card">`;
         
-        // --- 1. GRUPPSPELSTABELLEN MED RUBRIKER ---
-        html += `<table class="my-tips-table" style="width:100%; border-collapse:collapse; text-align:left;">`;
+        // --- 1. GRUPPSPELSTABELLEN MED RUBRIKER (TIGHT) ---
+        html += `<table class="my-tips-table" style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">`;
         html += `<thead>
             <tr>
-                <th style="padding-bottom:10px; font-size:11px; color:#888; text-transform:uppercase; font-weight:700;">Tippad</th>
-                <th style="padding-bottom:10px; font-size:11px; color:#888; text-transform:uppercase; font-weight:700;">Gruppetta</th>
-                <th style="padding-bottom:10px; font-size:11px; color:#888; text-transform:uppercase; font-weight:700;">Grupptvåa</th>
+                <th style="padding-bottom:4px; font-size:10px; color:#888; text-transform:uppercase; font-weight:700;">Tippad</th>
+                <th style="padding-bottom:4px; font-size:10px; color:#888; text-transform:uppercase; font-weight:700;">Gruppetta</th>
+                <th style="padding-bottom:4px; font-size:10px; color:#888; text-transform:uppercase; font-weight:700;">Grupptvåa</th>
             </tr>
         </thead><tbody>`;
         
@@ -193,14 +193,14 @@ if (me && me.groupPicks) {
                 secondColor = pick.second === official.second ? 'color:#28a745;' : 'color:#dc3545;';
             }
             html += `<tr style="border-top:1px solid #f1f1f1;">
-                <td class="mtt-label" style="padding:10px 0; font-weight:700; color:#555;">Grupp ${letter}</td>
-                <td class="mtt-team" style="padding:10px 0; ${firstColor}">${f(pick.first)} ${pick.first}</td>
-                <td class="mtt-team" style="padding:10px 0; ${secondColor}">${f(pick.second)} ${pick.second}</td>
+                <td class="mtt-label" style="padding:4px 0; font-weight:700; color:#555;">Grupp ${letter}</td>
+                <td class="mtt-team" style="padding:4px 0; ${firstColor}">${f(pick.first)} ${pick.first}</td>
+                <td class="mtt-team" style="padding:4px 0; ${secondColor}">${f(pick.second)} ${pick.second}</td>
             </tr>`;
         });
         html += `</tbody></table>`;
 
-        // --- 2. SLUTSPELSTIPS (KORT-LAYOUT) ---
+        // --- 2. SLUTSPELSTIPS (KOMPAKT KORT-LAYOUT) ---
         if (me.knockoutPicks) {
             const ko = me.knockoutPicks;
             const finalPick = ko.final || null;
@@ -209,14 +209,12 @@ if (me && me.groupPicks) {
             const r16Picks = ko.r16 || [];
             const r32Picks = ko.r32 || [];
 
-            // Filtrera fram vilka som åkte ut var
             const gold = finalPick;
             const silver = sfPicks.find(t => t !== gold) || null;
             const bronze = qfPicks.filter(t => !sfPicks.includes(t));
             const quarters = r16Picks.filter(t => !qfPicks.includes(t));
             const eights = r32Picks.filter(t => !r16Picks.includes(t));
 
-            // Hjälpfunktion för att behålla grön/röd färgkodning på lagtexten baserat på officiella resultat
             const getStatusColor = (team, roundKey) => {
                 let color = '';
                 if (!team) return color;
@@ -237,38 +235,34 @@ if (me && me.groupPicks) {
                 return color;
             };
 
-            html += `<div style="margin-top:24px; padding-top:20px; border-top:2px dashed #f1f1f1;">`;
-            html += `<h4 style="margin:0 0 15px; font-size:16px; color:#111;">Slutspelstips</h4>`;
+            html += `<div style="margin-top:16px; padding-top:12px; border-top:1px dashed #ddd;">`;
 
             // Guld & Silver
-            html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">`;
+            html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">`;
             if (gold) {
                 const c = getStatusColor(gold, 'final');
-                html += `<div style="background:#f1c40f; border-radius:6px; padding:15px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="font-size:10px; font-weight:800; color:#a67c00; letter-spacing:1px; margin-bottom:8px;">GULD</div>
-                    <div style="font-size:18px; margin-bottom:4px;">${f(gold)}</div>
-                    <div style="font-size:14px; font-weight:800; color:#333; ${c}">${gold}</div>
+                html += `<div style="background:#f1c40f; border-radius:4px; padding:8px; text-align:center;">
+                    <div style="font-size:9px; font-weight:800; color:#a67c00; letter-spacing:1px; margin-bottom:4px;">GULD</div>
+                    <div style="font-size:13px; font-weight:800; color:#333; ${c}">${f(gold)} ${gold}</div>
                 </div>`;
             }
             if (silver) {
                 const c = getStatusColor(silver, 'sf');
-                html += `<div style="background:#d1d8e0; border-radius:6px; padding:15px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="font-size:10px; font-weight:800; color:#6b7c93; letter-spacing:1px; margin-bottom:8px;">SILVER</div>
-                    <div style="font-size:18px; margin-bottom:4px;">${f(silver)}</div>
-                    <div style="font-size:14px; font-weight:800; color:#333; ${c}">${silver}</div>
+                html += `<div style="background:#d1d8e0; border-radius:4px; padding:8px; text-align:center;">
+                    <div style="font-size:9px; font-weight:800; color:#6b7c93; letter-spacing:1px; margin-bottom:4px;">SILVER</div>
+                    <div style="font-size:13px; font-weight:800; color:#333; ${c}">${f(silver)} ${silver}</div>
                 </div>`;
             }
             html += `</div>`;
 
             // Utslagna i Semifinal
             if (bronze.length > 0) {
-                html += `<div style="font-size:10px; font-weight:700; color:#9ba4b5; text-align:center; letter-spacing:1px; margin:20px 0 10px;">UTSLAGNA I SEMIFINAL</div>`;
-                html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
+                html += `<div style="font-size:9px; font-weight:700; color:#9ba4b5; text-align:center; letter-spacing:1px; margin:8px 0 4px;">UTSLAGNA I SEMIFINAL</div>`;
+                html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">`;
                 bronze.forEach(team => {
                     const c = getStatusColor(team, 'qf');
-                    html += `<div style="background:#fdebd0; border:1px solid #fad7a1; border-radius:6px; padding:8px 10px; display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:14px;">${f(team)}</span>
-                        <span style="font-size:13px; font-weight:700; color:#444; ${c}">${team}</span>
+                    html += `<div style="background:#fdebd0; border:1px solid #fad7a1; border-radius:4px; padding:4px 6px; display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px; font-weight:700; color:#444; ${c}">${f(team)} ${team}</span>
                     </div>`;
                 });
                 html += `</div>`;
@@ -276,13 +270,12 @@ if (me && me.groupPicks) {
 
             // Utslagna i Kvartsfinal
             if (quarters.length > 0) {
-                html += `<div style="font-size:10px; font-weight:700; color:#9ba4b5; text-align:center; letter-spacing:1px; margin:20px 0 10px;">UTSLAGNA I KVARTSFINAL</div>`;
-                html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
+                html += `<div style="font-size:9px; font-weight:700; color:#9ba4b5; text-align:center; letter-spacing:1px; margin:8px 0 4px;">UTSLAGNA I KVARTSFINAL</div>`;
+                html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">`;
                 quarters.forEach(team => {
                     const c = getStatusColor(team, 'r16');
-                    html += `<div style="background:#f4f6f9; border:1px solid #e1e5eb; border-radius:6px; padding:6px 10px; display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:12px;">${f(team)}</span>
-                        <span style="font-size:12px; color:#444; ${c}">${team}</span>
+                    html += `<div style="background:#f4f6f9; border:1px solid #e1e5eb; border-radius:4px; padding:3px 6px; display:flex; align-items:center; gap:4px;">
+                        <span style="font-size:11px; color:#444; ${c}">${f(team)} ${team}</span>
                     </div>`;
                 });
                 html += `</div>`;
@@ -290,13 +283,12 @@ if (me && me.groupPicks) {
 
             // Utslagna i Åttondelsfinal
             if (eights.length > 0) {
-                html += `<div style="font-size:10px; font-weight:700; color:#9ba4b5; text-align:center; letter-spacing:1px; margin:20px 0 10px;">UTSLAGNA I ÅTTONDELSFINAL</div>`;
-                html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
+                html += `<div style="font-size:9px; font-weight:700; color:#9ba4b5; text-align:center; letter-spacing:1px; margin:8px 0 4px;">UTSLAGNA I ÅTTONDELSFINAL</div>`;
+                html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">`;
                 eights.forEach(team => {
                     const c = getStatusColor(team, 'r32');
-                    html += `<div style="background:#fff; border:1px solid #eee; border-radius:6px; padding:6px 10px; display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:11px;">${f(team)}</span>
-                        <span style="font-size:11px; color:#555; ${c}">${team}</span>
+                    html += `<div style="background:#fff; border:1px solid #eee; border-radius:4px; padding:2px 6px; display:flex; align-items:center; gap:4px;">
+                        <span style="font-size:11px; color:#555; ${c}">${f(team)} ${team}</span>
                     </div>`;
                 });
                 html += `</div>`;
@@ -306,7 +298,6 @@ if (me && me.groupPicks) {
         }
         html += `</div>`;
     }
-
     html += `</div>`; // end dashboard-left
 
     // ── RIGHT COLUMN: Recent Results + Upcoming + Champion Chart ──────
