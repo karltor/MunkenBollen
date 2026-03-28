@@ -515,6 +515,40 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 }
 .welcome-popup .btn-welcome-dismiss:hover { background: #e0a800; }
 
+/* ── Email preference popup ── */
+.email-pref-popup h2 { font-size: 1.6rem; }
+.email-pref-options { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.email-pref-btn {
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    text-align: left;
+    color: white;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.email-pref-btn:hover { border-color: var(--color-bracket-accent); background: rgba(255,255,255,0.12); transform: translateY(-1px); }
+.email-pref-icon { font-size: 1.5rem; flex-shrink: 0; }
+.email-pref-btn strong { display: block; font-size: 15px; margin-bottom: 2px; }
+.email-pref-desc { font-size: 12px; color: #bbb; display: block; }
+
+/* Popup slide animation */
+.popup-slide-out { animation: slideOut 0.35s ease forwards; }
+.popup-slide-in { animation: slideIn 0.35s ease forwards; }
+@keyframes slideOut { to { transform: translateX(-120%); opacity: 0; } }
+@keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ── Settings page ── */
+.btn-settings { background: transparent; color: var(--color-navbar-text); font-size: 18px; padding: 4px 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; margin-right: 6px; }
+.btn-settings:hover { background: rgba(255,255,255,0.15); }
+.settings-radio { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; border: 1px solid #eee; background: white; }
+.settings-radio:hover { border-color: #aaa; }
+.settings-radio input[type="radio"] { margin-top: 3px; accent-color: #1a1a1a; }
+
 /* ── Comparison table match cells ── */
 .compare-match-cell { min-width: 160px; }
 .compare-match-date { font-size: 10px; color: #888; margin-bottom: 4px; }

@@ -23,6 +23,47 @@ export async function initEmailDraft() {
     });
     document.getElementById('admin-generate-email').addEventListener('click', generateEmailDraft);
     document.getElementById('admin-copy-email').addEventListener('click', copyEmailDraft);
+
+    // Email lists
+    document.getElementById('admin-load-email-lists').addEventListener('click', loadEmailLists);
+    document.querySelectorAll('.email-list-copy').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const textarea = document.getElementById(btn.dataset.target);
+            try {
+                await navigator.clipboard.writeText(textarea.value);
+                btn.textContent = 'Kopierat!';
+                setTimeout(() => { btn.textContent = 'Kopiera'; }, 2000);
+            } catch { /* noop */ }
+        });
+    });
+}
+
+async function loadEmailLists() {
+    const btn = document.getElementById('admin-load-email-lists');
+    btn.disabled = true;
+    btn.textContent = 'Laddar...';
+
+    const usersSnap = await getDocs(collection(db, "users"));
+    const often = [], few = [];
+
+    usersSnap.docs.forEach(d => {
+        const data = d.data();
+        if (!data.email || d.id.startsWith('fake_')) return;
+        const pref = data.emailPref || null;
+        if (pref === 'often') often.push(data.email);
+        else if (pref === 'few') few.push(data.email);
+    });
+
+    often.sort();
+    few.sort();
+
+    document.getElementById('email-list-often').value = often.join('\n');
+    document.getElementById('email-list-often-count').textContent = `(${often.length})`;
+    document.getElementById('email-list-few').value = few.join('\n');
+    document.getElementById('email-list-few-count').textContent = `(${few.length})`;
+
+    btn.disabled = false;
+    btn.textContent = 'Ladda mejllistor';
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
