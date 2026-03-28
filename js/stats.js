@@ -170,7 +170,7 @@ export async function loadCommunityStats(prefetchedSettings) {
 
     const me = users.find(u => u.userId === currentUserId);
 if (me && me.groupPicks) {
-        html += `<h3 style="margin-top:20px;">Min tipsrad</h3>`;
+        html += `<h3 style="margin-top:0; margin-bottom:10px;">Min tipsrad</h3>`;
         html += `<div class="stat-card">`;
         
         // --- 1. GRUPPSPELSTABELLEN MED RUBRIKER (TIGHT) ---
