@@ -3,7 +3,7 @@ import { doc, getDoc, setDoc, deleteDoc, collection, getDocs, writeBatch } from 
 import { f } from './wizard.js';
 import { bumpDataVersion, allMatches, existingResults, currentAdminGroup, renderGroupButtons, renderAdminMatches } from './admin.js';
 import { getGroupStandings, renderAdminBracket } from './admin-bracket.js';
-import { getGroupLetters, getKnockoutRounds, getFinalRound, getGroupStageConfig, hasStageType } from './tournament-config.js';
+import { getGroupLetters, getKnockoutRounds, getFinalRound, getGroupStageConfig, hasStageType, isTwoLegged } from './tournament-config.js';
 
 const FAKE_NAMES = [
     'Lure Drejeri', 'Bo Ring', 'Anna Conda', 'Sansen Dansen',
@@ -104,16 +104,31 @@ export async function addFakeTeachers() {
             userData.matchTips = matchTips;
         }
 
-        // Knockout picks
+        // Knockout picks + scores
         const shuffled = [...allTeamsList].sort(() => Math.random() - 0.5);
         const knockout = {};
+        const knockoutScores = {};
         const koRounds = getKnockoutRounds();
         const finalRd = getFinalRound();
         koRounds.forEach(r => {
             const pickCount = r.teams / 2;
-            knockout[r.key] = r === finalRd ? shuffled[0] : shuffled.slice(0, pickCount);
+            const picks = r === finalRd ? shuffled[0] : shuffled.slice(0, pickCount);
+            knockout[r.key] = picks;
+            // Generate random scores for each matchup
+            const twoLeg = isTwoLegged(r.key);
+            const scores = [];
+            for (let mi = 0; mi < pickCount; mi++) {
+                const s = { score1: Math.floor(Math.random() * 4), score2: Math.floor(Math.random() * 4) };
+                if (twoLeg) {
+                    s.score1_leg2 = Math.floor(Math.random() * 4);
+                    s.score2_leg2 = Math.floor(Math.random() * 4);
+                }
+                scores.push(s);
+            }
+            knockoutScores[r.key] = scores;
         });
         userData.knockout = knockout;
+        userData.knockoutScores = knockoutScores;
 
         await setDoc(doc(db, "users", fakeId), userData);
     }
