@@ -478,6 +478,7 @@ async function generateEmailDraft() {
                 name: d.name || userDoc.id,
                 groupPicks: d.groupPicks || null,
                 knockoutPicks: d.knockout || null,
+                knockoutScores: d.knockoutScores || null,
                 matchTips: d.matchTips || {}
             });
         }
