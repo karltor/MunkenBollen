@@ -1,7 +1,7 @@
 import { auth } from './config.js';
 import { f } from './wizard.js';
 import { sign } from './scoring.js';
-import { getGroupLetters, getKnockoutRounds, getFinalRound, getTournamentName } from './tournament-config.js';
+import { getGroupLetters, getKnockoutRounds, getFinalRound, getTournamentName, isTwoLegged } from './tournament-config.js';
 
 let _comparisonState = {
     selectedUsers: [],
@@ -364,7 +364,9 @@ function renderAdvancedView(users) {
     let html = '';
     const matchDocs = window._cachedMatchDocs || [];
     const results = _cachedResults || {};
+    const bracket = _cachedBracket;
 
+    // Group stage matches
     const groupedMatches = {};
     matchDocs.forEach(m => {
         const stage = m.stage || 'Övrigt';
@@ -373,10 +375,6 @@ function renderAdvancedView(users) {
     });
 
     const stages = Object.keys(groupedMatches).sort();
-
-    if (stages.length === 0) {
-        html += `<tr><td colspan="${users.length + 1}" style="text-align:center; color:#888;">Laddar matcher... / Inga matcher hittades.</td></tr>`;
-    }
 
     stages.forEach(stage => {
         html += `<tr><td colspan="${users.length + 1}" style="background:#e9ecef; font-weight:700; text-align:center; padding:6px; font-size:12px; position:sticky; left:0; z-index:1;">${stage}</td></tr>`;
@@ -420,5 +418,88 @@ function renderAdvancedView(users) {
             html += `</tr>`;
         });
     });
+
+    // Knockout matches from bracket (each leg = separate row)
+    if (bracket?.rounds) {
+        getKnockoutRounds().forEach(rd => {
+            const twoLeg = isTwoLegged(rd.key);
+            const matches = bracket.rounds[rd.adminKey] || [];
+            if (matches.length === 0 || !matches.some(m => m.team1 && m.team2)) return;
+
+            html += `<tr><td colspan="${users.length + 1}" style="background:#1f1f3a; color:#ffc107; font-weight:700; text-align:center; padding:6px; font-size:12px; position:sticky; left:0; z-index:1;">${rd.label}</td></tr>`;
+
+            matches.forEach((m, mi) => {
+                if (!m.team1 || !m.team2) return;
+
+                // Leg 1
+                const hasL1 = m.score1 !== undefined;
+                const l1Score = hasL1 ? `<span style="font-weight:800; padding:0 6px; min-width:36px; text-align:center;">${m.score1} - ${m.score2}</span>` : `<span class="compare-team-sep">-</span>`;
+                const l1Label = twoLeg ? ` – Match 1` : '';
+                html += `<tr>`;
+                html += `<td class="compare-match-cell" style="position:sticky; left:0; background:#f4f7f6; z-index:1; border-right:2px solid #ddd; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
+                    <div class="compare-match-date">${m.date || ''}${l1Label}</div>
+                    <div class="compare-match-teams">
+                        <span class="compare-team-flag">${f(m.team1)}</span><span class="compare-team-name">${m.team1}</span>
+                        ${l1Score}
+                        <span class="compare-team-name">${m.team2}</span><span class="compare-team-flag">${f(m.team2)}</span>
+                    </div>
+                </td>`;
+                users.forEach(u => {
+                    const tip = u.knockoutScores?.[rd.key]?.[mi];
+                    if (tip && tip.score1 != null && tip.score2 != null) {
+                        let bg = 'white', color = '';
+                        if (hasL1) {
+                            const exact = tip.score1 === m.score1 && tip.score2 === m.score2;
+                            const rightWinner = !exact && sign(tip.score1 - tip.score2) === sign(m.score1 - m.score2);
+                            if (exact) { bg = '#e8f5e9'; color = 'color:#28a745;'; }
+                            else if (rightWinner) { bg = '#e3f2fd'; color = 'color:#1976d2;'; }
+                            else { bg = '#fce8e6'; color = 'color:#dc3545;'; }
+                        }
+                        html += `<td style="font-size:16px; font-weight:800; text-align:center; background:${bg}; ${color}">${tip.score1} - ${tip.score2}</td>`;
+                    } else {
+                        html += `<td style="color:#ccc; text-align:center; background:white;">-</td>`;
+                    }
+                });
+                html += `</tr>`;
+
+                // Leg 2 (if two-legged)
+                if (twoLeg) {
+                    const hasL2 = m.score1_leg2 !== undefined;
+                    const l2Score = hasL2 ? `<span style="font-weight:800; padding:0 6px; min-width:36px; text-align:center;">${m.score1_leg2} - ${m.score2_leg2}</span>` : `<span class="compare-team-sep">-</span>`;
+                    html += `<tr>`;
+                    html += `<td class="compare-match-cell" style="position:sticky; left:0; background:#f4f7f6; z-index:1; border-right:2px solid #ddd; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
+                        <div class="compare-match-date">${m.date_leg2 || ''} – Match 2 (retur)</div>
+                        <div class="compare-match-teams">
+                            <span class="compare-team-flag">${f(m.team2)}</span><span class="compare-team-name">${m.team2}</span>
+                            ${l2Score}
+                            <span class="compare-team-name">${m.team1}</span><span class="compare-team-flag">${f(m.team1)}</span>
+                        </div>
+                    </td>`;
+                    users.forEach(u => {
+                        const tip = u.knockoutScores?.[rd.key]?.[mi];
+                        if (tip && tip.score1_leg2 != null && tip.score2_leg2 != null) {
+                            let bg = 'white', color = '';
+                            if (hasL2) {
+                                const exact = tip.score1_leg2 === m.score1_leg2 && tip.score2_leg2 === m.score2_leg2;
+                                const rightWinner = !exact && sign(tip.score1_leg2 - tip.score2_leg2) === sign(m.score1_leg2 - m.score2_leg2);
+                                if (exact) { bg = '#e8f5e9'; color = 'color:#28a745;'; }
+                                else if (rightWinner) { bg = '#e3f2fd'; color = 'color:#1976d2;'; }
+                                else { bg = '#fce8e6'; color = 'color:#dc3545;'; }
+                            }
+                            html += `<td style="font-size:16px; font-weight:800; text-align:center; background:${bg}; ${color}">${tip.score1_leg2} - ${tip.score2_leg2}</td>`;
+                        } else {
+                            html += `<td style="color:#ccc; text-align:center; background:white;">-</td>`;
+                        }
+                    });
+                    html += `</tr>`;
+                }
+            });
+        });
+    }
+
+    if (stages.length === 0 && (!bracket?.rounds || !Object.values(bracket.rounds).some(r => r?.some(m => m.team1)))) {
+        html += `<tr><td colspan="${users.length + 1}" style="text-align:center; color:#888;">Inga matcher hittades.</td></tr>`;
+    }
+
     return html;
 }
