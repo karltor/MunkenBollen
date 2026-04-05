@@ -209,7 +209,7 @@ export function renderTippersSummary(exactTippers, winnerTippers) {
         html += renderTippersLine('✓', winnerTippers, 'tippade rätt vinnare', '#17a2b8');
     }
     if (exactTippers.length === 0 && winnerTippers.length === 0) {
-        html += `<div style="font-size:12px; color:#999; margin-top:4px; text-align:center;">Ingen tippade rätt</div>`;
+        html += `<div style="font-size:12px; color:#999; margin-top:4px; text-align:center;">Ingen annan tippade rätt</div>`;
     }
     return html;
 }
