@@ -62,18 +62,43 @@ const WC2026_DEFAULT = {
 };
 
 let _config = null;
+const CONFIG_CACHE_KEY = 'munkentipset_tournament_config_v1';
 
-// ── Load config from Firestore (call once at startup) ───────────────
-export async function loadTournamentConfig() {
+function _loadConfigCache() {
     try {
+        const raw = localStorage.getItem(CONFIG_CACHE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
+function _saveConfigCache(dataVersion, config) {
+    try {
+        localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify({ dataVersion, config }));
+    } catch { /* quota exceeded */ }
+}
+
+// ── Load config from Firestore (with localStorage cache) ───────────
+// Pass dataVersion from settings to avoid extra Firestore read
+export async function loadTournamentConfig(dataVersion) {
+    try {
+        if (dataVersion !== undefined) {
+            const cached = _loadConfigCache();
+            if (cached && cached.dataVersion === dataVersion && cached.config) {
+                _config = cached.config;
+                return _config;
+            }
+        }
+
         const snap = await getDoc(doc(db, "matches", "_tournament"));
         if (snap.exists()) {
             _config = snap.data();
         } else {
             _config = WC2026_DEFAULT;
         }
+        if (dataVersion !== undefined) _saveConfigCache(dataVersion, _config);
     } catch {
-        _config = WC2026_DEFAULT;
+        const cached = _loadConfigCache();
+        _config = cached?.config || WC2026_DEFAULT;
     }
     return _config;
 }

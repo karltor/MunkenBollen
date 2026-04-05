@@ -207,23 +207,25 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
             const finalRd = koRoundsAll[koRoundsAll.length - 1];
             const gold = finalRd ? (typeof ko[finalRd.key] === 'string' ? ko[finalRd.key] : null) : null;
 
-            // Build eliminated-per-round: teams picked for round N but not for round N+1
+            // Silver = the other SF pick that isn't gold
+            const sfRound = koRoundsAll.length >= 2 ? koRoundsAll[koRoundsAll.length - 2] : null;
+            const sfPicks = sfRound ? (ko[sfRound.key] || []) : [];
+            const silver = Array.isArray(sfPicks) ? sfPicks.find(t => t !== gold) : null;
+
+            // Build eliminated-per-round: teams in round N picks but not in round N+1 picks
+            // = teams that won round N but lost in round N+1 → label with nextRound
+            // Skip the SF→Final pair since that gives us Silver (already shown above)
             const eliminatedPerRound = [];
-            for (let ri = koRoundsAll.length - 2; ri >= 0; ri--) {
+            for (let ri = koRoundsAll.length - 3; ri >= 0; ri--) {
                 const thisRound = koRoundsAll[ri];
                 const nextRound = koRoundsAll[ri + 1];
                 const thisPicks = ko[thisRound.key] || [];
                 const nextPicks = typeof ko[nextRound.key] === 'string' ? [ko[nextRound.key]] : (ko[nextRound.key] || []);
                 const eliminated = (Array.isArray(thisPicks) ? thisPicks : [thisPicks]).filter(t => !nextPicks.includes(t));
                 if (eliminated.length > 0) {
-                    eliminatedPerRound.push({ round: thisRound, eliminated });
+                    eliminatedPerRound.push({ round: nextRound, statusRoundKey: thisRound.key, eliminated });
                 }
             }
-
-            // Silver = the other SF pick that isn't gold
-            const sfRound = koRoundsAll.length >= 2 ? koRoundsAll[koRoundsAll.length - 2] : null;
-            const sfPicks = sfRound ? (ko[sfRound.key] || []) : [];
-            const silver = Array.isArray(sfPicks) ? sfPicks.find(t => t !== gold) : null;
 
             const getStatusColor = (team, roundKey) => {
                 let color = '';
@@ -266,11 +268,11 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
             html += '</div>';
 
             // Show eliminated teams per round (dynamic)
-            eliminatedPerRound.forEach(({ round, eliminated }) => {
+            eliminatedPerRound.forEach(({ round, statusRoundKey, eliminated }) => {
                 html += `<div style="font-size:9px; font-weight:700; color:#9ba4b5; text-align:center; letter-spacing:1px; margin:8px 0 4px;">UTSLAGNA I ${round.label.toUpperCase()}</div>`;
                 html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">';
                 eliminated.forEach(team => {
-                    const c = getStatusColor(team, round.key);
+                    const c = getStatusColor(team, statusRoundKey);
                     html += '<div style="background:#f4f6f9; border:1px solid #e1e5eb; border-radius:4px; padding:3px 6px; display:flex; align-items:center; gap:4px;">';
                     html += '<span style="font-size:11px; color:#444; ' + c + '">' + f(team) + ' ' + team + '</span>';
                     html += '</div>';

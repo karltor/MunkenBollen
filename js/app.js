@@ -88,8 +88,13 @@ onAuthStateChanged(auth, async (user) => {
     }
     document.getElementById('user-name').textContent = user.displayName || user.email;
 
-    // Load tournament config before anything else
-    await loadTournamentConfig();
+    // Check lock status + get settings first (1 read — reused everywhere)
+    const { locked, settings } = await checkTipsLocked();
+    globalTipsLocked = locked;
+    const dataVersion = settings.dataVersion || 0;
+
+    // Load tournament config (cached in localStorage using dataVersion)
+    await loadTournamentConfig(dataVersion);
 
     // Update branding from config
     const tName = getTournamentName();
@@ -119,11 +124,6 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('admin-btn').style.display = 'inline-block';
         document.getElementById('chat-admin-btn').addEventListener('click', () => toggleChatAdminPanel());
     }
-
-    // Check lock status + get settings (1 read — reused by loadCommunityStats)
-    const { locked, settings } = await checkTipsLocked();
-    globalTipsLocked = locked;
-    const dataVersion = settings.dataVersion || 0;
 
     // Check if user has completed group tips (read from user doc)
     const userSnap = await getDoc(doc(db, "users", user.uid));
