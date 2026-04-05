@@ -3,7 +3,7 @@ import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/fireba
 import { f } from './wizard.js';
 import { DEFAULT_SCORING, buildDefaultScoring, buildOfficialGroupStandings, calcLeaderboard, sign, parseMatchDate, renderStatBar, renderTippersSummary, renderTippersLine } from './scoring.js';
 import { initCompareState, showFullLeaderboard, showAllTips } from './compare.js';
-import { getGroupLetters, getKnockoutRounds, getTournamentName, getTournamentYear, hasStageType } from './tournament-config.js';
+import { getGroupLetters, getKnockoutRounds, getTournamentName, getTournamentYear, hasStageType, isTwoLegged } from './tournament-config.js';
 
 export { DEFAULT_SCORING };
 
@@ -74,6 +74,7 @@ export async function loadCommunityStats(prefetchedSettings) {
                 name: d.name || userDoc.id,
                 groupPicks: d.groupPicks || null,
                 knockoutPicks: d.knockout || null,
+                knockoutScores: d.knockoutScores || null,
                 matchTips: d.matchTips || {}
             };
             if (u.groupPicks || u.knockoutPicks || Object.keys(u.matchTips).length > 0) users.push(u);
@@ -319,20 +320,47 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
         });
     });
 
-    // Knockout results from bracket
+    // Knockout results from bracket (two-legged = two separate results)
     if (bracket?.rounds) {
         getKnockoutRounds().forEach((rd, ri) => {
+            const twoLeg = isTwoLegged(rd.key);
             (bracket.rounds[rd.adminKey] || []).forEach((m, mi) => {
-                if (m.winner && m.team1 && m.team2 && m.score1 !== undefined) {
-                    allPlayedMatches.push({
-                        matchId: `ko_${rd.adminKey}_${mi}`, homeTeam: m.team1, awayTeam: m.team2,
-                        homeScore: m.score1, awayScore: m.score2,
-                        stage: rd.label, date: m.date,
-                        _parsed: m.date ? parseMatchDate(m.date) : new Date(getTournamentYear(), 6, 1 + ri, mi),
-                        _isKnockout: true, _koRound: rd.adminKey,
-                        _koRoundKey: rd.key,
-                        _winner: m.winner
-                    });
+                if (!m.team1 || !m.team2) return;
+                if (twoLeg) {
+                    // Leg 1 result
+                    if (m.score1 !== undefined) {
+                        allPlayedMatches.push({
+                            matchId: `ko_${rd.adminKey}_${mi}_L1`, homeTeam: m.team1, awayTeam: m.team2,
+                            homeScore: m.score1, awayScore: m.score2,
+                            stage: `${rd.label} – Match 1`, date: m.date,
+                            _parsed: m.date ? parseMatchDate(m.date) : new Date(getTournamentYear(), 6, 1 + ri, mi),
+                            _isKnockout: true, _koRound: rd.adminKey, _koRoundKey: rd.key,
+                            _koMatchIdx: mi, _koLeg: 1, _winner: m.winner
+                        });
+                    }
+                    // Leg 2 result
+                    if (m.score1_leg2 !== undefined) {
+                        allPlayedMatches.push({
+                            matchId: `ko_${rd.adminKey}_${mi}_L2`, homeTeam: m.team2, awayTeam: m.team1,
+                            homeScore: m.score1_leg2, awayScore: m.score2_leg2,
+                            stage: `${rd.label} – Match 2 (retur)`, date: m.date_leg2,
+                            _parsed: m.date_leg2 ? parseMatchDate(m.date_leg2) : new Date(getTournamentYear(), 6, 2 + ri, mi),
+                            _isKnockout: true, _koRound: rd.adminKey, _koRoundKey: rd.key,
+                            _koMatchIdx: mi, _koLeg: 2, _winner: m.winner
+                        });
+                    }
+                } else {
+                    // Single leg
+                    if (m.winner && m.score1 !== undefined) {
+                        allPlayedMatches.push({
+                            matchId: `ko_${rd.adminKey}_${mi}`, homeTeam: m.team1, awayTeam: m.team2,
+                            homeScore: m.score1, awayScore: m.score2,
+                            stage: rd.label, date: m.date,
+                            _parsed: m.date ? parseMatchDate(m.date) : new Date(getTournamentYear(), 6, 1 + ri, mi),
+                            _isKnockout: true, _koRound: rd.adminKey, _koRoundKey: rd.key,
+                            _koMatchIdx: mi, _koLeg: 0, _winner: m.winner
+                        });
+                    }
                 }
             });
         });
@@ -379,16 +407,36 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
                         const tipStyle = myExact ? 'color:#28a745; font-weight:700;' : (myWinner ? 'color:#17a2b8;' : 'color:#dc3545;');
                         html += `<div style="font-size:12px; ${tipStyle} margin-top:6px; text-align:center;">Ditt tips: ${myTip.homeScore} - ${myTip.awayScore}${myExact ? ' ✨' : (myWinner ? ' ✓' : '')}</div>`;
                     }
-                } else if (me.knockoutPicks) {
+                } else if (me.knockoutScores || me.knockoutPicks) {
                     const roundKey = match._koRoundKey;
-                    const picks = typeof me.knockoutPicks[roundKey] === 'string' ? [me.knockoutPicks[roundKey]] : (me.knockoutPicks[roundKey] || []);
-                    const pickedHome = picks.includes(match.homeTeam);
-                    const pickedAway = picks.includes(match.awayTeam);
-                    if (pickedHome || pickedAway) {
-                        const team = pickedHome ? match.homeTeam : match.awayTeam;
-                        const correctPick = (pickedHome && match._winner === match.homeTeam) || (pickedAway && match._winner === match.awayTeam);
-                        const tipStyle = correctPick ? 'color:#28a745; font-weight:700;' : 'color:#dc3545;';
-                        html += `<div style="font-size:12px; ${tipStyle} margin-top:6px; text-align:center;">Du tippade: ${f(team)}${team} vidare${correctPick ? ' ✓' : ''}</div>`;
+                    const mi = match._koMatchIdx;
+                    const leg = match._koLeg;
+                    const tip = me.knockoutScores?.[roundKey]?.[mi];
+
+                    // Show per-leg score comparison
+                    if (tip) {
+                        let tipH, tipA;
+                        if (leg === 1) { tipH = tip.score1; tipA = tip.score2; }
+                        else if (leg === 2) { tipH = tip.score1_leg2; tipA = tip.score2_leg2; }
+                        if (tipH != null && tipA != null) {
+                            const myExact = tipH === h && tipA === a2;
+                            const myWinner = !myExact && sign(tipH - tipA) === sign(h - a2);
+                            const tipStyle = myExact ? 'color:#28a745; font-weight:700;' : (myWinner ? 'color:#17a2b8;' : 'color:#dc3545;');
+                            html += `<div style="font-size:12px; ${tipStyle} margin-top:6px; text-align:center;">Ditt tips: ${tipH} – ${tipA}${myExact ? ' ✨' : (myWinner ? ' ✓' : '')}</div>`;
+                        }
+                    }
+
+                    // Show advancement pick (on leg 2 or single-leg, when winner is known)
+                    if (me.knockoutPicks && match._winner && (leg === 2 || leg === 0)) {
+                        const picks = typeof me.knockoutPicks[roundKey] === 'string' ? [me.knockoutPicks[roundKey]] : (me.knockoutPicks[roundKey] || []);
+                        const origTeam1 = leg === 2 ? match.awayTeam : match.homeTeam;
+                        const origTeam2 = leg === 2 ? match.homeTeam : match.awayTeam;
+                        const picked = picks.find(t => t === origTeam1 || t === origTeam2);
+                        if (picked) {
+                            const correct = picked === match._winner;
+                            const advStyle = correct ? 'color:#28a745; font-weight:700;' : 'color:#dc3545;';
+                            html += `<div style="font-size:12px; ${advStyle} margin-top:2px; text-align:center;">Tippat vidare: ${f(picked)}${picked}${correct ? ' ✓' : ''}</div>`;
+                        }
                     }
                 }
             }
@@ -405,17 +453,25 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
                 });
                 html += renderTippersSummary(exactTippers, winnerTippers);
             } else {
-                const correctPickers = [];
                 const roundKey = match._koRoundKey;
+                const mi = match._koMatchIdx;
+                const leg = match._koLeg;
+                const exactTippers = [], winnerTippers = [];
                 users.forEach(u => {
                     if (u.userId === currentUserId) return;
-                    if (!u.knockoutPicks) return;
-                    const picks = typeof u.knockoutPicks[roundKey] === 'string' ? [u.knockoutPicks[roundKey]] : (u.knockoutPicks[roundKey] || []);
-                    if (picks.includes(match._winner)) correctPickers.push(u.name);
+                    const tip = u.knockoutScores?.[roundKey]?.[mi];
+                    if (tip) {
+                        let tipH, tipA;
+                        if (leg === 1) { tipH = tip.score1; tipA = tip.score2; }
+                        else if (leg === 2) { tipH = tip.score1_leg2; tipA = tip.score2_leg2; }
+                        else { tipH = tip.score1; tipA = tip.score2; }
+                        if (tipH != null && tipA != null) {
+                            if (tipH === h && tipA === a2) exactTippers.push(u.name);
+                            else if (sign(tipH - tipA) === sign(h - a2)) winnerTippers.push(u.name);
+                        }
+                    }
                 });
-                if (correctPickers.length > 0) {
-                    html += renderTippersLine('✓', correctPickers, 'tippade rätt', '#17a2b8');
-                }
+                html += renderTippersSummary(exactTippers, winnerTippers);
             }
 
             html += `</div>`;
@@ -437,18 +493,41 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
         }
     });
 
-    // Unplayed knockout matches from bracket
+    // Unplayed knockout matches from bracket (two-legged = two separate entries)
     if (bracket?.rounds) {
         getKnockoutRounds().forEach((rd, ri) => {
+            const twoLeg = isTwoLegged(rd.key);
             (bracket.rounds[rd.adminKey] || []).forEach((m, mi) => {
-                if (m.team1 && m.team2 && !m.winner) {
-                    allUpcoming.push({
-                        matchId: `ko_${rd.adminKey}_${mi}`, homeTeam: m.team1, awayTeam: m.team2,
-                        date: m.date, stage: rd.label,
-                        _parsed: m.date ? parseMatchDate(m.date) : new Date(getTournamentYear(), 6, 1 + ri, mi),
-                        _isKnockout: true,
-                        _koRoundKey: rd.key
-                    });
+                if (!m.team1 || !m.team2) return;
+                if (twoLeg) {
+                    // Leg 1: upcoming if no leg 1 result yet
+                    if (m.score1 === undefined) {
+                        allUpcoming.push({
+                            matchId: `ko_${rd.adminKey}_${mi}_L1`, homeTeam: m.team1, awayTeam: m.team2,
+                            date: m.date, stage: `${rd.label} – Match 1`,
+                            _parsed: m.date ? parseMatchDate(m.date) : new Date(getTournamentYear(), 6, 1 + ri, mi),
+                            _isKnockout: true, _koRoundKey: rd.key, _koMatchIdx: mi, _koLeg: 1
+                        });
+                    }
+                    // Leg 2: upcoming if no leg 2 result yet
+                    if (m.score1_leg2 === undefined) {
+                        allUpcoming.push({
+                            matchId: `ko_${rd.adminKey}_${mi}_L2`, homeTeam: m.team2, awayTeam: m.team1,
+                            date: m.date_leg2, stage: `${rd.label} – Match 2 (retur)`,
+                            _parsed: m.date_leg2 ? parseMatchDate(m.date_leg2) : new Date(getTournamentYear(), 6, 2 + ri, mi),
+                            _isKnockout: true, _koRoundKey: rd.key, _koMatchIdx: mi, _koLeg: 2
+                        });
+                    }
+                } else {
+                    // Single leg: upcoming if no winner
+                    if (!m.winner) {
+                        allUpcoming.push({
+                            matchId: `ko_${rd.adminKey}_${mi}`, homeTeam: m.team1, awayTeam: m.team2,
+                            date: m.date, stage: rd.label,
+                            _parsed: m.date ? parseMatchDate(m.date) : new Date(getTournamentYear(), 6, 1 + ri, mi),
+                            _isKnockout: true, _koRoundKey: rd.key, _koMatchIdx: mi, _koLeg: 0
+                        });
+                    }
                 }
             });
         });
@@ -487,14 +566,30 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
                     } else {
                         html += `<div style="font-size:12px; color:#ccc; margin-top:6px; text-align:center;">Inte tippat ännu</div>`;
                     }
-                } else if (me.knockoutPicks) {
+                } else if (me.knockoutScores || me.knockoutPicks) {
                     const roundKey = match._koRoundKey;
-                    const picks = typeof me.knockoutPicks[roundKey] === 'string' ? [me.knockoutPicks[roundKey]] : (me.knockoutPicks[roundKey] || []);
-                    const pickedHome = picks.includes(match.homeTeam);
-                    const pickedAway = picks.includes(match.awayTeam);
-                    if (pickedHome || pickedAway) {
-                        const team = pickedHome ? match.homeTeam : match.awayTeam;
-                        html += `<div style="font-size:12px; color:#555; margin-top:6px; text-align:center;">Du tippade: ${f(team)}${team} vidare</div>`;
+                    const mi = match._koMatchIdx;
+                    const leg = match._koLeg;
+                    const roundScores = me.knockoutScores?.[roundKey] || [];
+                    const tip = roundScores[mi];
+
+                    // Show per-leg score tip
+                    if (tip && leg === 1 && tip.score1 != null) {
+                        html += `<div style="font-size:12px; color:#555; margin-top:6px; text-align:center;">Ditt tips: <strong>${tip.score1} – ${tip.score2}</strong></div>`;
+                    } else if (tip && leg === 2 && tip.score1_leg2 != null) {
+                        html += `<div style="font-size:12px; color:#555; margin-top:6px; text-align:center;">Ditt tips: <strong>${tip.score1_leg2} – ${tip.score2_leg2}</strong></div>`;
+                    }
+
+                    // Show advancement pick (on leg 2 or single-leg)
+                    if (me.knockoutPicks && (leg === 2 || leg === 0)) {
+                        const picks = typeof me.knockoutPicks[roundKey] === 'string' ? [me.knockoutPicks[roundKey]] : (me.knockoutPicks[roundKey] || []);
+                        // For leg 2, homeTeam/awayTeam are swapped; check both original teams
+                        const origTeam1 = leg === 2 ? match.awayTeam : match.homeTeam;
+                        const origTeam2 = leg === 2 ? match.homeTeam : match.awayTeam;
+                        const picked = picks.find(t => t === origTeam1 || t === origTeam2);
+                        if (picked) {
+                            html += `<div style="font-size:12px; color:#888; margin-top:2px; text-align:center;">Tippat vidare: ${f(picked)}<strong>${picked}</strong></div>`;
+                        }
                     }
                 }
             }
