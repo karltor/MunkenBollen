@@ -421,23 +421,36 @@ async function saveAndNext() {
     if (!allFilled && currentMode === 'casual') autoFillScores();
 
     const standings = calcFullStandings(groupMatches);
-    const existing = existingGroupPicks || {};
-    existing[letter] = {
+
+    // Safety: if existingGroupPicks is missing, re-read from Firestore to avoid data loss
+    if (!existingGroupPicks) {
+        const freshSnap = await getDoc(doc(db, "users", userId));
+        const freshData = freshSnap.exists() ? freshSnap.data() : {};
+        existingGroupPicks = freshData.groupPicks || {};
+    }
+
+    const groupData = {
         first: standings[0]?.name, second: standings[1]?.name,
         third: standings[2]?.name, fourth: standings[3]?.name,
         thirdPts: standings[2]?.pts || 0, thirdGd: standings[2]?.gd || 0, thirdGf: standings[2]?.gf || 0
     };
-    existing.mode = currentMode;
 
-    // Only mark as completed when ALL groups have picks
-    const allGroupsDone = getGroupLetters().every(l => existing[l]?.first && existing[l]?.second);
-    if (allGroupsDone) existing.completedAt = new Date().toISOString();
-    updates.groupPicks = existing;
+    // Use dot-notation to only update the specific group — never replace the entire groupPicks
+    updates[`groupPicks.${letter}`] = groupData;
+    updates[`groupPicks.mode`] = currentMode;
+
+    // Check completion against the full known state
+    existingGroupPicks[letter] = groupData;
+    existingGroupPicks.mode = currentMode;
+    const allGroupsDone = getGroupLetters().every(l => existingGroupPicks[l]?.first && existingGroupPicks[l]?.second);
+    if (allGroupsDone) {
+        updates[`groupPicks.completedAt`] = new Date().toISOString();
+        existingGroupPicks.completedAt = new Date().toISOString();
+    }
 
     try {
         await updateDoc(doc(db, "users", userId), updates);
         invalidateStatsCache();
-        existingGroupPicks = existing;
     } catch (e) {
         console.error("Fel vid sparning", e);
         return showToast("Kunde inte spara. Försök igen.");
@@ -449,9 +462,9 @@ async function saveAndNext() {
     } else {
         // Find next untipped group, or go to next sequential group
         const letters = getGroupLetters();
-        const missingIdx = letters.findIndex(l => !existing[l]?.first);
+        const missingIdx = letters.findIndex(l => !existingGroupPicks[l]?.first);
         if (missingIdx !== -1 && missingIdx !== currentIndex) {
-            const remaining = letters.filter(l => !existing[l]?.first).length;
+            const remaining = letters.filter(l => !existingGroupPicks[l]?.first).length;
             showToast(`Sparat! ${remaining} grupp${remaining > 1 ? 'er' : ''} kvar att tippa.`);
             storeCurrentScores();
             currentIndex = missingIdx;
@@ -464,9 +477,9 @@ async function saveAndNext() {
             window.scrollTo(0, 0);
         } else {
             // On last group but others missing — jump to first missing
-            const firstMissing = letters.findIndex(l => !existing[l]?.first);
+            const firstMissing = letters.findIndex(l => !existingGroupPicks[l]?.first);
             if (firstMissing !== -1) {
-                const remaining = letters.filter(l => !existing[l]?.first).length;
+                const remaining = letters.filter(l => !existingGroupPicks[l]?.first).length;
                 showToast(`Sparat! ${remaining} grupp${remaining > 1 ? 'er' : ''} kvar att tippa.`);
                 storeCurrentScores();
                 currentIndex = firstMissing;
