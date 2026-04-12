@@ -439,6 +439,8 @@ function nextQuestionId() {
 }
 
 function addQuestion() {
+    // Sync any in-progress edits before re-rendering, or they'd be lost
+    syncQuestionsFromDOM();
     editState.specialQuestions.push({
         id: nextQuestionId(),
         text: '',
@@ -451,6 +453,7 @@ function addQuestion() {
 }
 
 function removeQuestion(qId) {
+    syncQuestionsFromDOM();
     editState.specialQuestions = editState.specialQuestions.filter(q => q.id !== qId);
     renderSpecialQuestions();
 }
