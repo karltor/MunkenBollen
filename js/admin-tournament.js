@@ -254,7 +254,12 @@ export function renderTeamRoster() {
     const el = document.getElementById('team-roster');
     const badge = document.getElementById('team-count-badge');
     if (!el) return;
-    const needed = editState.hasKnockout ? getTeamsNeeded() : editState.groupLetters.length * editState.teamsPerGroup;
+    // When groups exist, every group team must be in the roster; knockout teams
+    // come from groups, so group total is what's actually needed. Fall back to
+    // knockout's starting-round count when it's a knockout-only tournament.
+    const needed = editState.hasGroups
+        ? editState.groupLetters.length * editState.teamsPerGroup
+        : (editState.hasKnockout ? getTeamsNeeded() : 0);
     if (badge) badge.textContent = `(${editState.teams.length}${needed ? ' / ' + needed + ' behövs' : ''})`;
     el.innerHTML = editState.teams.map(t =>
         `<span class="team-tag" draggable="true" data-team="${t}">${teamImg(t, { size: 16, height: 12, style: 'margin:0 4px 0 0;' })}${t} <span class="team-tag-x" data-team="${t}">&times;</span></span>`
