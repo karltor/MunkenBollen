@@ -4,6 +4,7 @@ import { f, fLarge, flags } from './wizard.js';
 import { getTeamImageUrl } from './team-data.js';
 import { invalidateStatsCache } from './stats.js';
 import { getKnockoutRounds, getGroupLetters, getGroupStageConfig, getChampionLabel, getTournamentName, getFinalRound, hasStageType, isTwoLegged, getRoundAdminKey } from './tournament-config.js';
+import { isTipsLockedLive } from './lock-check.js';
 
 function _rounds() { return getKnockoutRounds().map(r => r.key); }
 function _roundLabel(key) {
@@ -35,6 +36,15 @@ let listenersAttached = false;
 let bracketLocked = false;
 let adminBracket = null;
 let knockoutOnly = false;
+
+export function setBracketLocked(locked) {
+    bracketLocked = !!locked;
+    // If currently rendered, re-render to reflect lock state
+    const container = document.getElementById('bracket-content');
+    if (container && container.innerHTML.trim()) {
+        document.querySelectorAll('#bracket-tab .bracket-save-btn, #bracket-tab [data-bracket-save]').forEach(b => { b.disabled = !!locked; });
+    }
+}
 
 export async function initBracket(groupPicks, tipsLocked) {
     bracketLocked = tipsLocked || false;
@@ -658,6 +668,12 @@ function updateSaveBtn(roundKey) {
 // ── Save bracket round ────────────────────────────────────────────────
 async function saveBracketRound() {
     if (bracketLocked) return;
+    // Live re-check against Firestore (prevents saves after admin locked)
+    if (await isTipsLockedLive()) {
+        bracketLocked = true;
+        alert('Tipsraderna har just låsts av admin. Dina ändringar sparades inte.');
+        return;
+    }
     const roundKey = _rounds()[currentRound];
     const userId = auth.currentUser.uid;
     const twoLeg = isTwoLegged(roundKey);

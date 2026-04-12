@@ -3,6 +3,7 @@ import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.10
 import { invalidateStatsCache } from './stats.js';
 import { getGroupLetters } from './tournament-config.js';
 import { countryFlags, clubCrestIds, teamImg, teamImgLarge } from './team-data.js';
+import { isTipsLockedLive } from './lock-check.js';
 
 // Flagg-hjälpare — backward-compatible exports
 // 'flags' maps team name → flag code (countries) or null (clubs handled by teamImg)
@@ -403,6 +404,11 @@ function updateWizardTable() {
 // ─── SAVE ────────────────────────────────────────────
 async function saveAndNext() {
     if (tipsLocked) return showToast('Tipsraderna är låsta av admin.');
+    // Live re-check against Firestore (prevents saves after admin locked)
+    if (await isTipsLockedLive()) {
+        tipsLocked = true;
+        return showToast('Tipsraderna har just låsts av admin. Dina ändringar sparades inte.');
+    }
     const letter = getGroupLetters()[currentIndex];
     const userId = auth.currentUser.uid;
     if (!selFirst || !selSecond) return showToast("Välj gruppetta och grupptvåa först!");
@@ -508,3 +514,9 @@ function calcFullStandings(groupMatches) {
 }
 
 export function getGroupPicks() { return existingGroupPicks; }
+
+export function setWizardLocked(locked) {
+    tipsLocked = !!locked;
+    // If save-button is rendered, disable it
+    document.querySelectorAll('#wizard-tab .btn-save-group, #wizard-tab .btn-save, #wizard-tab [data-wizard-save]').forEach(b => { b.disabled = !!locked; });
+}
