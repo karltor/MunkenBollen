@@ -9,8 +9,14 @@
 import { db, auth } from './config.js';
 import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getSpecialQuestionsConfig } from './tournament-config.js';
+import { isTipsLockedLive } from './lock-check.js';
 
 let tipsLocked = false;
+
+export function setSpecialLocked(locked) {
+    tipsLocked = !!locked;
+    document.querySelectorAll('#btn-save-special').forEach(b => { b.disabled = !!locked; });
+}
 
 function showToast(msg) {
     let t = document.querySelector('.toast');
@@ -149,6 +155,13 @@ async function saveSpecialTips(container, questions) {
 
     const user = auth.currentUser;
     if (!user) return;
+
+    // Live re-check against Firestore (prevents saves after admin locked)
+    if (await isTipsLockedLive()) {
+        tipsLocked = true;
+        showToast('Tipsraderna har just låsts av admin. Dina ändringar sparades inte.');
+        return;
+    }
 
     const picks = {};
     let unanswered = 0;

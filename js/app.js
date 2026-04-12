@@ -1,12 +1,12 @@
 import { auth, db } from './config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-import { collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { loadTournamentConfig, getTournamentName, hasStageType, getSpecialQuestionsConfig } from './tournament-config.js';
-import { initWizard, getGroupPicks } from './wizard.js';
-import { initBracket } from './bracket.js';
-import { loadCommunityStats } from './stats.js';
+import { initWizard, getGroupPicks, setWizardLocked } from './wizard.js';
+import { initBracket, setBracketLocked } from './bracket.js';
+import { loadCommunityStats, invalidateStatsCache } from './stats.js';
 import { initAdmin, checkTipsLocked } from './admin.js';
-import { initSpecialTips } from './special-tips.js';
+import { initSpecialTips, setSpecialLocked } from './special-tips.js';
 import { loadResults } from './results.js';
 import { applyStoredTheme } from './admin-theme.js';
 import { loadEmailPref, showEmailPrefPopup, initSettingsTab } from './user-settings.js';
@@ -38,6 +38,8 @@ const WELCOME_DISMISSED_KEY = 'munkentipset_welcome_dismissed';
 let allMatchesData = [];
 let isAdmin = false;
 let globalTipsLocked = false;
+let currentDataVersion = 0;
+let liveUnsub = null;
 
 function applyTabVisibility() {
     const hasGroups = hasStageType('round-robin-groups');
@@ -141,7 +143,13 @@ onAuthStateChanged(auth, async (user) => {
     // Check lock status + get settings first (1 read — reused everywhere)
     const { locked, settings } = await checkTipsLocked();
     globalTipsLocked = locked;
-    const dataVersion = settings.dataVersion || 0;
+    let dataVersion = settings.dataVersion || 0;
+
+    // Set up live listener on _settings doc (1 Firestore listener per user —
+    // cheap: ~1 read per settings update × connected users). Enables:
+    //  1. Instant lock/unlock when admin toggles tipsLocked
+    //  2. Live data refresh when admin bumps dataVersion (match results, etc.)
+    setupLiveSync(user, dataVersion);
 
     // Load tournament config (validates cache against dataVersion, fetches if stale)
     await loadTournamentConfig(dataVersion);
@@ -281,4 +289,126 @@ function lockBracket() {
 
 function unlockBracket() {
     unlockTab('bracket-tab');
+}
+
+// ─── Global toast (used by live-sync notifications) ────────────
+function showGlobalToast(msg, type = 'info') {
+    let t = document.getElementById('global-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'global-toast'; t.className = 'toast'; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.style.background = type === 'warn' ? '#dc3545' : (type === 'success' ? '#28a745' : '#333');
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ─── Live sync: listen for admin-driven changes ───────────────
+function setupLiveSync(user, initialDataVersion) {
+    currentDataVersion = initialDataVersion;
+    if (liveUnsub) liveUnsub();
+
+    liveUnsub = onSnapshot(doc(db, "matches", "_settings"), async (snap) => {
+        if (!snap.exists()) return;
+        const settings = snap.data();
+        const newLocked = settings.tipsLocked === true;
+        const newDataVersion = settings.dataVersion || 0;
+
+        // ── Lock state change ───────────────────────────────
+        if (newLocked !== globalTipsLocked) {
+            globalTipsLocked = newLocked;
+            if (newLocked) {
+                applyLiveLock();
+            } else {
+                applyLiveUnlock(user);
+            }
+        }
+
+        // ── Data version bumped by admin (new result, match edit, etc.) ──
+        if (newDataVersion !== currentDataVersion) {
+            currentDataVersion = newDataVersion;
+            await applyLiveDataRefresh(newDataVersion);
+        }
+    }, (err) => {
+        console.warn('Live sync listener error:', err);
+    });
+}
+
+function applyLiveLock() {
+    // Propagate to child modules so any in-flight save will abort
+    setWizardLocked(true);
+    setBracketLocked(true);
+    setSpecialLocked(true);
+
+    lockTab('wizard-tab', 'Tipsraderna är låsta av admin.');
+    lockTab('bracket-tab', 'Tipsraderna är låsta av admin.');
+    lockTab('special-tab', 'Tipsraderna är låsta av admin.');
+
+    // If user is currently editing tips, kick them to start tab
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    if (['wizard-tab', 'bracket-tab', 'special-tab'].includes(activeTab)) {
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelector('.tab-btn[data-target="start-tab"]').classList.add('active');
+        document.getElementById('start-tab').classList.add('active');
+        destroyChat();
+        loadCommunityStats();
+        showGlobalToast('🔒 Tipsraderna har låsts av admin. Dina osparade ändringar sparades inte.', 'warn');
+    } else {
+        showGlobalToast('🔒 Tipsraderna har låsts av admin.', 'warn');
+    }
+}
+
+function applyLiveUnlock(user) {
+    setWizardLocked(false);
+    setBracketLocked(false);
+    setSpecialLocked(false);
+
+    unlockTab('wizard-tab');
+    unlockTab('special-tab');
+    // Bracket depends on whether user has done groups — re-evaluate async
+    (async () => {
+        if (!hasStageType('round-robin-groups')) {
+            unlockBracket();
+        } else {
+            try {
+                const s = await getDoc(doc(db, "users", user.uid));
+                const d = s.data() || {};
+                if (d.groupPicks?.completedAt) unlockBracket();
+                else lockBracket();
+            } catch { /* noop */ }
+        }
+    })();
+
+    showGlobalToast('🔓 Admin har låst upp tipsraderna.', 'success');
+}
+
+async function applyLiveDataRefresh(newDataVersion) {
+    // Invalidate caches
+    invalidateStatsCache();
+    try { localStorage.removeItem(MATCHES_CACHE_KEY); } catch { /* noop */ }
+
+    // Re-fetch matches & tournament config
+    try {
+        await loadTournamentConfig(newDataVersion);
+        const snap = await getDocs(collection(db, "matches"));
+        allMatchesData = snap.docs.filter(d => !d.id.startsWith('_')).map(d => d.data());
+        localStorage.setItem(MATCHES_CACHE_KEY, JSON.stringify({ dataVersion: newDataVersion, matches: allMatchesData }));
+    } catch (e) {
+        console.warn('Live refresh fetch failed:', e);
+        return;
+    }
+
+    // Re-apply tab visibility (tournament structure may have changed)
+    applyTabVisibility();
+    const tName = getTournamentName();
+    document.querySelector('.logo-text').textContent = tName;
+    document.title = tName;
+
+    // Refresh the visible data tab — but NEVER disrupt a user mid-tipping
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    if (activeTab === 'start-tab') loadCommunityStats();
+    else if (activeTab === 'results-tab') loadResults(allMatchesData);
+    // wizard/bracket/special: leave alone — user may be mid-edit
+
+    showGlobalToast('📊 Resultat uppdaterade.', 'success');
 }
