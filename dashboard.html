@@ -426,6 +426,28 @@
                     </div>
                     <button class="btn" id="admin-load-email-lists" style="margin-top:10px; width:100%; background:#6c757d; font-size:13px;">Ladda mejllistor</button>
                 </div>
+
+                <div class="admin-card" style="margin-top:16px;">
+                    <h3 style="margin-top:0;">Användarstatus</h3>
+                    <p style="color:#666; font-size:13px; margin:0 0 12px;">Vilka har loggat in och fyllt i sina tips? Påminn de som inte är klara.</p>
+                    <button class="btn" id="admin-load-user-status" style="width:100%; background:#6c757d; font-size:13px; margin-bottom:12px;">Ladda användarstatus</button>
+                    <div id="admin-user-status-summary" style="font-size:13px; color:#555; margin-bottom:10px;"></div>
+                    <div id="admin-user-status-table-wrap" style="overflow-x:auto;"></div>
+                    <div id="admin-user-status-incomplete" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid #eee;">
+                        <h4 style="margin:0 0 6px; font-size:14px;">✉️ Påminnelsemejl — inte klara <span id="incomplete-count" style="color:#888; font-weight:400;">(0)</span></h4>
+                        <p style="color:#888; font-size:12px; margin:0 0 8px;">Användare som loggat in men inte fyllt i alla aktiva tipsmoment.</p>
+                        <textarea id="incomplete-email-list" readonly style="width:100%; height:70px; font-size:12px; font-family:monospace; padding:8px; border:1px solid #ddd; border-radius:6px; resize:vertical;"></textarea>
+                        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            <button class="btn email-list-copy" data-target="incomplete-email-list" style="flex:1; background:#17a2b8; font-size:12px;">Kopiera mejladresser</button>
+                            <button class="btn" id="admin-generate-reminder" style="flex:1; background:#ffc107; color:#000; font-size:12px;">Generera påminnelseutkast</button>
+                        </div>
+                        <div id="admin-reminder-output" style="display:none; margin-top:12px; position:relative;">
+                            <button class="btn" id="admin-copy-reminder" style="position:absolute; top:8px; right:8px; background:#28a745; font-size:12px; padding:5px 12px;">Kopiera</button>
+                            <h4 style="margin:0 0 6px; font-size:14px;">Utkast</h4>
+                            <div id="admin-reminder-preview" style="font-size:14px; line-height:1.6; padding:12px; border:1px solid #eee; border-radius:6px; background:#fafafa;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ADMIN SUB: Turnering -->

@@ -2,7 +2,7 @@ import { db } from './config.js';
 import { doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { flags } from './wizard.js';
 import { DEFAULT_SCORING, buildOfficialGroupStandings, calcLeaderboard, sign, parseMatchDate } from './scoring.js';
-import { getGroupLetters, getKnockoutRounds, getTournamentName, getFinalRound } from './tournament-config.js';
+import { getGroupLetters, getKnockoutRounds, getTournamentName, getFinalRound, hasStageType, getSpecialQuestionsConfig } from './tournament-config.js';
 
 export async function initEmailDraft() {
     const snap = await getDoc(doc(db, "matches", "_settings"));
@@ -27,13 +27,179 @@ export async function initEmailDraft() {
     document.querySelectorAll('.email-list-copy').forEach(btn => {
         btn.addEventListener('click', async () => {
             const textarea = document.getElementById(btn.dataset.target);
+            if (!textarea) return;
             try {
                 await navigator.clipboard.writeText(textarea.value);
+                const orig = btn.textContent;
                 btn.textContent = 'Kopierat!';
-                setTimeout(() => { btn.textContent = 'Kopiera'; }, 2000);
+                setTimeout(() => { btn.textContent = orig; }, 2000);
             } catch { /* noop */ }
         });
     });
+
+    // User completion status
+    document.getElementById('admin-load-user-status').addEventListener('click', loadUserCompletionTable);
+    document.getElementById('admin-generate-reminder').addEventListener('click', generateReminderDraft);
+    document.getElementById('admin-copy-reminder').addEventListener('click', copyReminderDraft);
+}
+
+// ── User completion tracker ─────────────────────────────────────────
+
+function isGroupsDone(u) {
+    return !!u.groupPicks?.completedAt;
+}
+function isKnockoutDone(u) {
+    const finalKey = getFinalRound()?.key;
+    if (!finalKey) return false;
+    const pick = u.knockout?.[finalKey];
+    return typeof pick === 'string' ? !!pick : !!(pick && pick.length);
+}
+function isSpecialDone(u) {
+    return !!u.specialPicks?.completedAt;
+}
+
+async function loadUserCompletionTable() {
+    const btn = document.getElementById('admin-load-user-status');
+    btn.disabled = true;
+    btn.textContent = 'Laddar...';
+
+    const usersSnap = await getDocs(collection(db, "users"));
+    const users = usersSnap.docs
+        .filter(d => !d.id.startsWith('fake_'))
+        .map(d => ({ uid: d.id, ...d.data() }))
+        .filter(u => u.email);
+
+    const hasGroups = hasStageType('round-robin-groups');
+    const hasKnockout = hasStageType('single-elimination');
+    const hasSpecial = hasStageType('special-questions');
+    const specialLabel = getSpecialQuestionsConfig()?.label || 'Specialtips';
+
+    // Sort: incomplete first, then name
+    const annotated = users.map(u => {
+        const g = hasGroups ? isGroupsDone(u) : null;
+        const k = hasKnockout ? isKnockoutDone(u) : null;
+        const s = hasSpecial ? isSpecialDone(u) : null;
+        const needed = [g, k, s].filter(x => x !== null);
+        const allDone = needed.length > 0 && needed.every(Boolean);
+        return { u, g, k, s, allDone };
+    });
+    annotated.sort((a, b) => {
+        if (a.allDone !== b.allDone) return a.allDone ? 1 : -1;
+        return (a.u.name || a.u.email).localeCompare(b.u.name || b.u.email, 'sv');
+    });
+
+    const cell = (val) => val === null
+        ? `<td style="text-align:center; color:#ccc;">—</td>`
+        : (val ? `<td style="text-align:center; color:#28a745; font-weight:700;">✓</td>`
+               : `<td style="text-align:center; color:#dc3545; font-weight:700;">✗</td>`);
+
+    let html = `<table style="width:100%; border-collapse:collapse; font-size:13px;">`;
+    html += `<thead><tr style="border-bottom:2px solid #ddd; background:#f8f9fa;">`;
+    html += `<th style="text-align:left; padding:8px 6px;">Namn</th>`;
+    html += `<th style="text-align:left; padding:8px 6px;">Email</th>`;
+    if (hasGroups) html += `<th style="padding:8px 6px;">Gruppspel</th>`;
+    if (hasKnockout) html += `<th style="padding:8px 6px;">Slutspel</th>`;
+    if (hasSpecial) html += `<th style="padding:8px 6px;">${specialLabel}</th>`;
+    html += `<th style="padding:8px 6px;">Klar?</th>`;
+    html += `</tr></thead><tbody>`;
+
+    let doneCount = 0;
+    const incompleteEmails = [];
+    annotated.forEach(({ u, g, k, s, allDone }) => {
+        if (allDone) doneCount++;
+        else incompleteEmails.push(u.email);
+        const rowBg = allDone ? '' : 'background:rgba(220,53,69,0.04);';
+        html += `<tr style="border-bottom:1px solid #eee; ${rowBg}">`;
+        html += `<td style="padding:6px; font-weight:600;">${escapeHtml(u.name || '—')}</td>`;
+        html += `<td style="padding:6px; color:#666; font-size:12px;">${escapeHtml(u.email)}</td>`;
+        if (hasGroups) html += cell(g);
+        if (hasKnockout) html += cell(k);
+        if (hasSpecial) html += cell(s);
+        html += allDone
+            ? `<td style="text-align:center; color:#28a745; font-weight:700;">✓</td>`
+            : `<td style="text-align:center; color:#dc3545; font-weight:700;">✗</td>`;
+        html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+
+    document.getElementById('admin-user-status-table-wrap').innerHTML = html;
+    document.getElementById('admin-user-status-summary').textContent =
+        `${users.length} inloggade · ${doneCount} klara · ${users.length - doneCount} inte klara`;
+
+    // Populate incomplete email list
+    const incompleteDiv = document.getElementById('admin-user-status-incomplete');
+    if (incompleteEmails.length > 0) {
+        incompleteDiv.style.display = 'block';
+        document.getElementById('incomplete-email-list').value = incompleteEmails.sort().join('\n');
+        document.getElementById('incomplete-count').textContent = `(${incompleteEmails.length})`;
+    } else {
+        incompleteDiv.style.display = 'none';
+    }
+
+    // Stash for reminder draft
+    _incompleteUsers = annotated.filter(a => !a.allDone);
+
+    btn.disabled = false;
+    btn.textContent = 'Uppdatera användarstatus';
+}
+
+let _incompleteUsers = [];
+
+function generateReminderDraft() {
+    if (_incompleteUsers.length === 0) return;
+    const hasGroups = hasStageType('round-robin-groups');
+    const hasKnockout = hasStageType('single-elimination');
+    const hasSpecial = hasStageType('special-questions');
+    const specialLabel = getSpecialQuestionsConfig()?.label || 'Specialtips';
+    const tName = getTournamentName();
+
+    const missingLabels = [];
+    if (hasGroups) missingLabels.push('Gruppspel');
+    if (hasKnockout) missingLabels.push('Slutspel');
+    if (hasSpecial) missingLabels.push(specialLabel);
+
+    let html = '';
+    html += `<div style="text-align:center; margin-bottom:20px;">`;
+    html += `<h1 style="font-size:22px; margin:0;">Glöm inte att tippa! 🎯</h1>`;
+    html += `<p style="color:#888; margin:4px 0 0; font-size:13px;">${escapeHtml(tName)}</p>`;
+    html += `</div>`;
+    html += `<p>Hej!</p>`;
+    html += `<p>Du har loggat in på MunkenTipset men har inte fyllt i alla dina tips än. Du behöver tippa i följande:</p>`;
+    html += `<ul style="font-size:14px; line-height:1.8;">`;
+    missingLabels.forEach(l => { html += `<li><strong>${escapeHtml(l)}</strong></li>`; });
+    html += `</ul>`;
+    html += `<p>Det tar bara några minuter — logga in och gör klart dina tips innan starten!</p>`;
+    html += `<p style="margin-top:20px;">Hälsningar,<br>MunkenTipset</p>`;
+    html += `<hr style="border:none; border-top:1px solid #eee; margin:20px 0;">`;
+    html += `<p style="font-size:12px; color:#888;">Detta mejl gick till ${_incompleteUsers.length} personer som loggat in men inte är klara med sina tips.</p>`;
+
+    document.getElementById('admin-reminder-preview').innerHTML = html;
+    document.getElementById('admin-reminder-output').style.display = 'block';
+}
+
+async function copyReminderDraft() {
+    const preview = document.getElementById('admin-reminder-preview');
+    const btn = document.getElementById('admin-copy-reminder');
+    try {
+        const blob = new Blob([preview.innerHTML], { type: 'text/html' });
+        const plainBlob = new Blob([preview.innerText], { type: 'text/plain' });
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'text/html': blob, 'text/plain': plainBlob })
+        ]);
+        btn.textContent = 'Kopierat!';
+    } catch {
+        try {
+            await navigator.clipboard.writeText(preview.innerText);
+            btn.textContent = 'Kopierat (text)!';
+        } catch {
+            btn.textContent = 'Misslyckades';
+        }
+    }
+    setTimeout(() => { btn.textContent = 'Kopiera'; }, 2500);
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 async function loadEmailLists() {
