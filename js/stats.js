@@ -120,7 +120,12 @@ export async function loadCommunityStats(prefetchedSettings) {
     const specialConfig = getSpecialQuestionsConfig();
     const specialLabel = specialConfig?.label || 'Special';
     const colCount = 2 + (hasGroups ? 1 : 0) + (hasSpecial ? 1 : 0);
-    html += `<table class="group-table" style="font-size:14px;"><thead><tr><th style="text-align:left;">Namn</th>${hasGroups ? '<th>Grupp</th>' : ''}<th>Slutspel</th>${hasSpecial ? `<th>${specialLabel}</th>` : ''}<th>Totalt</th></tr></thead><tbody>`;
+    // Short headers on mobile to keep the table in viewport
+    const groupHead = `<th><span class="lb-full">Grupp</span><span class="lb-short">G</span></th>`;
+    const koHead = `<th><span class="lb-full">Slutspel</span><span class="lb-short">KO</span></th>`;
+    const specialHead = `<th><span class="lb-full">${specialLabel}</span><span class="lb-short">SP</span></th>`;
+    const totalHead = `<th><span class="lb-full">Totalt</span><span class="lb-short">Tot</span></th>`;
+    html += `<table class="group-table leaderboard-table" style="font-size:14px;"><thead><tr><th style="text-align:left;">Namn</th>${hasGroups ? groupHead : ''}${koHead}${hasSpecial ? specialHead : ''}${totalHead}</tr></thead><tbody>`;
 
     const myRank = scores.findIndex(s => s.userId === currentUserId);
     const showTop = Math.min(scores.length, 10);

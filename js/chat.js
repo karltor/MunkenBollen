@@ -21,6 +21,8 @@ const TRIM_THRESHOLD = 2000; // trim array when it exceeds this
 export function setChatAdmin(val) { isAdmin = val; }
 
 export async function initChat() {
+    // Always (re-)measure chat layout — tab may have been reopened after leaving
+    fitChatLayoutToViewport();
     if (unsubMessages) return; // already listening
 
     // Inject dynamic CSS for the highlight animation if it doesn't exist
@@ -43,10 +45,6 @@ export async function initChat() {
     // Show admin button if admin
     const adminBtn = document.getElementById('chat-admin-btn');
     if (adminBtn) adminBtn.style.display = isAdmin ? 'inline-block' : 'none';
-
-    // Mobile: scroll chat-tab into view and size the layout to fill the viewport
-    // so the input row is immediately visible at the bottom of the screen.
-    fitChatLayoutToViewport();
 
     // Load meta (shadowban/mute lists) — 1 read
     try {
@@ -631,19 +629,28 @@ function buildTipBadges(activeMatches, chatUids) {
 }
 
 // Ensures the chat input row is immediately visible at the bottom of the
-// viewport on mobile, rather than requiring the user to scroll the page.
-// The CSS calc(100dvh - 110px) for .chat-layout is an approximation of the
-// page chrome (navbar + tabs); here we measure it at runtime instead.
+// viewport on mobile, by pinning .chat-layout to the viewport (position:
+// fixed via CSS). Measure where the chat-tab naturally sits below the
+// navbar+tabs chrome and feed that into the CSS --chat-top-offset.
 function fitChatLayoutToViewport() {
     if (window.innerWidth > 768) return;
     const tab = document.getElementById('chat-tab');
-    const layout = tab?.querySelector('.chat-layout');
-    if (!tab || !layout) return;
-    // Defer so any layout shifts from rendering the chat complete first
+    if (!tab) return;
+    // requestAnimationFrame + tiny timeout so navbar/tabs have finalized layout
     requestAnimationFrame(() => {
-        const offsetTop = tab.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({ top: offsetTop, behavior: 'instant' });
-        // After scrolling, chat-tab starts at viewport top → fill remaining height
-        layout.style.height = (window.innerHeight - 4) + 'px';
+        // Scroll to top so measurements are consistent
+        window.scrollTo(0, 0);
+        // Measure position of chat-tab from viewport top (= distance from top
+        // to where the tab starts, i.e. below navbar + tab-buttons row)
+        const top = Math.max(tab.getBoundingClientRect().top, 8);
+        document.documentElement.style.setProperty('--chat-top-offset', top + 'px');
+    });
+}
+
+// Re-measure on resize / orientation change so the chat layout stays correct.
+if (typeof window !== 'undefined') {
+    window.addEventListener('resize', () => {
+        const tab = document.getElementById('chat-tab');
+        if (tab?.classList.contains('active')) fitChatLayoutToViewport();
     });
 }
