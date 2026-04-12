@@ -230,6 +230,15 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 
 /* Leaderboard constrained */
 .leaderboard-card { max-width: 500px; }
+.lb-full { display: inline; }
+.lb-short { display: none; }
+@media (max-width: 600px) {
+    .lb-full { display: none; }
+    .lb-short { display: inline; }
+    .leaderboard-table { font-size: 13px !important; }
+    .leaderboard-table td, .leaderboard-table th { padding: 4px 3px; text-align: center; }
+    .leaderboard-table td:first-child, .leaderboard-table th:first-child { text-align: left !important; padding-left: 2px; }
+}
 
 /* My Tips table - aligned columns */
 .my-tips-table { border-collapse: collapse; font-size: 13px; width: 100%; }
@@ -1288,8 +1297,16 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 
 /* Mobile chat */
 @media (max-width: 768px) {
-    .chat-layout {
-        height: calc(100dvh - 110px);
+    /* Pin chat-layout to the viewport so the input row is always visible at
+       the bottom of the screen, regardless of page scroll or nav height.
+       --chat-top-offset is set by chat.js on init based on measured nav+tabs. */
+    #chat-tab.active .chat-layout {
+        position: fixed;
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        top: var(--chat-top-offset, 155px);
+        height: auto;
     }
     .chat-top-bar { padding: 0 0 4px; }
     .chat-match-grid { gap: 4px; }
