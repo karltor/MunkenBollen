@@ -11,6 +11,16 @@ export function invalidateStatsCache() {
     try { localStorage.removeItem(STATS_CACHE_KEY); } catch { /* noop */ }
 }
 
+// Render a name with two variants: full on desktop, first-name + initials on
+// mobile (e.g. "Linnea Meijer" → "Linnea M", "Vanessa Perez Ferrante" →
+// "Vanessa P F"). CSS media query toggles which span is visible.
+function renderName(name) {
+    const parts = String(name || '').trim().split(/\s+/);
+    if (parts.length <= 1) return `<span class="lb-name">${name}</span>`;
+    const short = parts[0] + ' ' + parts.slice(1).map(p => (p[0] || '').toUpperCase()).join(' ');
+    return `<span class="lb-name-full">${name}</span><span class="lb-name-short">${short}</span>`;
+}
+
 // ── localStorage cache helpers ─────────────────────────────────────────────
 const STATS_CACHE_KEY = 'munkentipset_stats_cache_v2';
 
@@ -135,14 +145,14 @@ export async function loadCommunityStats(prefetchedSettings) {
         const isMe = s.userId === currentUserId;
         const medal = i === 0 ? '🥇 ' : (i === 1 ? '🥈 ' : (i === 2 ? '🥉 ' : `${i + 1}. `));
         const style = isMe ? 'background:rgba(40,167,69,0.08); font-weight:700;' : '';
-        html += `<tr style="${style}"><td style="text-align:left;padding-left:6px;">${medal}${s.name}</td>${hasGroups ? `<td>${s.groupPts}</td>` : ''}<td>${s.koPts}</td>${hasSpecial ? `<td>${s.specialPts || 0}</td>` : ''}<td><strong>${s.total}</strong></td></tr>`;
+        html += `<tr style="${style}"><td style="text-align:left;padding-left:6px;">${medal}${renderName(s.name)}</td>${hasGroups ? `<td>${s.groupPts}</td>` : ''}<td>${s.koPts}</td>${hasSpecial ? `<td>${s.specialPts || 0}</td>` : ''}<td><strong>${s.total}</strong></td></tr>`;
     }
 
     // If user is outside top 10, show separator + their row
     if (myRank >= 10) {
         const s = scores[myRank];
         html += `<tr style="border-top:2px dashed #ddd;"><td colspan="${colCount + 1}" style="text-align:center; color:#999; font-size:11px; padding:4px;">···</td></tr>`;
-        html += `<tr style="background:rgba(40,167,69,0.08); font-weight:700;"><td style="text-align:left;padding-left:6px;">${myRank + 1}. ${s.name}</td>${hasGroups ? `<td>${s.groupPts}</td>` : ''}<td>${s.koPts}</td>${hasSpecial ? `<td>${s.specialPts || 0}</td>` : ''}<td><strong>${s.total}</strong></td></tr>`;
+        html += `<tr style="background:rgba(40,167,69,0.08); font-weight:700;"><td style="text-align:left;padding-left:6px;">${myRank + 1}. ${renderName(s.name)}</td>${hasGroups ? `<td>${s.groupPts}</td>` : ''}<td>${s.koPts}</td>${hasSpecial ? `<td>${s.specialPts || 0}</td>` : ''}<td><strong>${s.total}</strong></td></tr>`;
     }
 
     html += `</tbody></table>`;

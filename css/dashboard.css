@@ -230,14 +230,16 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 
 /* Leaderboard constrained */
 .leaderboard-card { max-width: 500px; }
-.lb-full { display: inline; }
-.lb-short { display: none; }
+.lb-full, .lb-name-full { display: inline; }
+.lb-short, .lb-name-short { display: none; }
 @media (max-width: 600px) {
-    .lb-full { display: none; }
-    .lb-short { display: inline; }
-    .leaderboard-table { font-size: 13px !important; }
-    .leaderboard-table td, .leaderboard-table th { padding: 4px 3px; text-align: center; }
-    .leaderboard-table td:first-child, .leaderboard-table th:first-child { text-align: left !important; padding-left: 2px; }
+    .lb-full, .lb-name-full { display: none; }
+    .lb-short, .lb-name-short { display: inline; }
+    /* Shrink table to content width so columns sit adjacent (no auto-layout
+       whitespace distributed between the name and score columns). */
+    .leaderboard-table { width: auto !important; font-size: 13px !important; }
+    .leaderboard-table td, .leaderboard-table th { padding: 4px 8px; text-align: center; white-space: nowrap; }
+    .leaderboard-table td:first-child, .leaderboard-table th:first-child { text-align: left !important; padding-left: 2px; padding-right: 12px; }
 }
 
 /* My Tips table - aligned columns */
