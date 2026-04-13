@@ -151,20 +151,19 @@ onAuthStateChanged(auth, async (user) => {
     //  2. Live data refresh when admin bumps dataVersion (match results, etc.)
     setupLiveSync(user, dataVersion);
 
-    // Load tournament config (validates cache against dataVersion, fetches if stale)
-    await loadTournamentConfig(dataVersion);
+    // Load tournament config + user doc in parallel (need both before hiding loader
+    // so we can apply final lock state to tabs — otherwise they flash unlocked)
+    const [, userSnap] = await Promise.all([
+        loadTournamentConfig(dataVersion),
+        getDoc(doc(db, "users", user.uid))
+    ]);
+    const userData = userSnap.data() || {};
 
     // Re-apply branding and tab visibility with confirmed config
     const tName = getTournamentName();
     document.querySelector('.logo-text').textContent = tName;
     document.title = tName;
     applyTabVisibility();
-
-    // Hide loading screen now that branding & tabs are in their final state
-    hideLoader();
-
-    // Ensure user doc exists with email + display name (single write)
-    await setDoc(doc(db, "users", user.uid), { email: user.email, name: user.displayName || user.email }, { merge: true });
 
     // Admin check
     isAdmin = ADMINS.includes(email);
@@ -174,11 +173,8 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('chat-admin-btn').addEventListener('click', () => toggleChatAdminPanel());
     }
 
-    // Check if user has completed group tips (read from user doc)
-    const userSnap = await getDoc(doc(db, "users", user.uid));
-    const userData = userSnap.data() || {};
-
-    // When tips are locked by admin, lock wizard, bracket and special tabs
+    // Apply final tab lock state BEFORE hiding the loader, so users never see
+    // unlocked tip-tabs flash before the lock kicks in
     if (locked) {
         lockTab('wizard-tab', 'Tipsraderna är låsta av admin.');
         lockTab('bracket-tab', 'Tipsraderna är låsta av admin.');
@@ -191,6 +187,12 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         lockBracket();
     }
+
+    // Hide loading screen now that branding, tabs AND lock state are in their final state
+    hideLoader();
+
+    // Ensure user doc exists with email + display name (single write, fire-and-forget)
+    setDoc(doc(db, "users", user.uid), { email: user.email, name: user.displayName || user.email }, { merge: true });
 
     // Load matches — cached in localStorage, only re-fetched when dataVersion changes
     let matchesCached;
