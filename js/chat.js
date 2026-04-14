@@ -449,9 +449,9 @@ function getActiveMatches() {
     const all = [...ongoing, ...bracketMatches.ongoing];
     const allUpcoming = [...upcoming, ...bracketMatches.upcoming];
 
-    // Max 4 total: ongoing first, fill with upcoming
-    const active = all.slice(0, 4);
-    const remaining = 4 - active.length;
+    // Max 2 total: ongoing first, fill with upcoming
+    const active = all.slice(0, 2);
+    const remaining = 2 - active.length;
     if (remaining > 0) active.push(...allUpcoming.slice(0, remaining));
 
     return active;
