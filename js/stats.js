@@ -64,31 +64,69 @@ export async function loadCommunityStats(prefetchedSettings) {
         users = cached.users;
         matchDocs = cached.matchDocs;
     } else {
-        // Cache miss – full fetch (results, bracket, matches, all user tips)
-        const [resultsSnap, bracketSnap, matchesColSnap] = await Promise.all([
+        // Cache miss – fetch results, bracket, matches, and the aggregate _tips doc.
+        // The _tips doc is maintained by admin on every bumpDataVersion(), so a
+        // single read replaces getDocs(users) (O(1) instead of O(N) reads).
+        const [resultsSnap, bracketSnap, matchesColSnap, tipsSnap] = await Promise.all([
             getDoc(doc(db, "matches", "_results")),
             getDoc(doc(db, "matches", "_bracket")),
-            getDocs(collection(db, "matches"))
+            getDocs(collection(db, "matches")),
+            getDoc(doc(db, "matches", "_tips"))
         ]);
         results = resultsSnap.exists() ? resultsSnap.data() : {};
         bracket = bracketSnap.exists() ? bracketSnap.data() : null;
         matchDocs = matchesColSnap.docs.filter(d => !d.id.startsWith('_')).map(d => ({ id: d.id, ...d.data() }));
 
-        // All tips are stored directly on the user doc — one read per user, no subcollections
-        const usersSnap = await getDocs(collection(db, "users"));
-        users = [];
-        for (const userDoc of usersSnap.docs) {
-            const d = userDoc.data();
-            const u = {
-                userId: userDoc.id,
-                name: d.name || userDoc.id,
-                groupPicks: d.groupPicks || null,
-                knockoutPicks: d.knockout || null,
-                knockoutScores: d.knockoutScores || null,
-                matchTips: d.matchTips || {},
-                specialPicks: d.specialPicks || null
-            };
-            if (u.groupPicks || u.knockoutPicks || Object.keys(u.matchTips).length > 0 || u.specialPicks) users.push(u);
+        // Prefer the pre-aggregated _tips doc when fresh; fall back to the users
+        // collection if it's missing (first-time admin) or stale (dataVersion
+        // drifted because a user saved tips after the last admin bump).
+        const tipsData = tipsSnap.exists() ? tipsSnap.data() : null;
+        if (tipsData && tipsData.dataVersion === dataVersion && Array.isArray(tipsData.users)) {
+            users = tipsData.users;
+            // Always refresh the current user's own entry (+1 read) — they may
+            // have saved tips after the last admin bump, in which case _tips
+            // has a stale version of their picks. Peers' picks are fine since
+            // they can't change without dataVersion eventually drifting too.
+            const uid = auth.currentUser?.uid;
+            if (uid) {
+                try {
+                    const meSnap = await getDoc(doc(db, "users", uid));
+                    if (meSnap.exists()) {
+                        const d = meSnap.data();
+                        const freshMe = {
+                            userId: uid,
+                            name: d.name || uid,
+                            groupPicks: d.groupPicks || null,
+                            knockoutPicks: d.knockout || null,
+                            knockoutScores: d.knockoutScores || null,
+                            matchTips: d.matchTips || {},
+                            specialPicks: d.specialPicks || null
+                        };
+                        const hasTips = freshMe.groupPicks || freshMe.knockoutPicks
+                            || Object.keys(freshMe.matchTips).length > 0 || freshMe.specialPicks;
+                        const idx = users.findIndex(u => u.userId === uid);
+                        if (idx >= 0) users[idx] = freshMe;
+                        else if (hasTips) users.push(freshMe);
+                    }
+                } catch { /* noop — fall back to whatever _tips had */ }
+            }
+        } else {
+            // Fallback: one read per user doc — preserves correctness.
+            const usersSnap = await getDocs(collection(db, "users"));
+            users = [];
+            for (const userDoc of usersSnap.docs) {
+                const d = userDoc.data();
+                const u = {
+                    userId: userDoc.id,
+                    name: d.name || userDoc.id,
+                    groupPicks: d.groupPicks || null,
+                    knockoutPicks: d.knockout || null,
+                    knockoutScores: d.knockoutScores || null,
+                    matchTips: d.matchTips || {},
+                    specialPicks: d.specialPicks || null
+                };
+                if (u.groupPicks || u.knockoutPicks || Object.keys(u.matchTips).length > 0 || u.specialPicks) users.push(u);
+            }
         }
 
         _saveStatsCache(dataVersion, { results, bracket, users, matchDocs });

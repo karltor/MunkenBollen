@@ -4,7 +4,7 @@ import { collection, getDocs, doc, getDoc, setDoc, onSnapshot } from "https://ww
 import { loadTournamentConfig, getTournamentName, hasStageType, getSpecialQuestionsConfig } from './tournament-config.js';
 import { initWizard, getGroupPicks, setWizardLocked } from './wizard.js';
 import { initBracket, setBracketLocked } from './bracket.js';
-import { loadCommunityStats, invalidateStatsCache } from './stats.js';
+import { loadCommunityStats } from './stats.js';
 import { initAdmin, checkTipsLocked } from './admin.js';
 import { initSpecialTips, setSpecialLocked } from './special-tips.js';
 import { loadResults } from './results.js';
@@ -40,6 +40,8 @@ let isAdmin = false;
 let globalTipsLocked = false;
 let currentDataVersion = 0;
 let liveUnsub = null;
+let pendingDataRefresh = null;
+const LIVE_REFRESH_DEBOUNCE_MS = 1500;
 
 function applyTabVisibility() {
     const hasGroups = hasStageType('round-robin-groups');
@@ -219,7 +221,13 @@ onAuthStateChanged(auth, async (user) => {
 
     if (isAdmin) initAdmin(allMatchesData);
 
-    loadCommunityStats(settings);
+    // Only load community stats eagerly if start-tab is the active tab on load
+    // (which it is by default). If the user restored a different tab, defer:
+    // the stats will load when they click the Start tab.
+    const activeTabOnLoad = document.querySelector('.tab-content.active')?.id;
+    if (activeTabOnLoad === 'start-tab') {
+        loadCommunityStats(settings);
+    }
 
     // Show welcome popup for first-time visitors, or email pref if not set
     const emailPref = await loadEmailPref();
@@ -327,9 +335,17 @@ function setupLiveSync(user, initialDataVersion) {
         }
 
         // ── Data version bumped by admin (new result, match edit, etc.) ──
+        // Debounce: a single admin "Save" can bump dataVersion once, but a
+        // burst of saves (or multi-step flows like bracket edits) can fire
+        // the listener several times within a second. Without debouncing,
+        // every fire re-runs applyLiveDataRefresh → multiple full refetches
+        // per connected user. Collapse into one refresh after the burst.
         if (newDataVersion !== currentDataVersion) {
             currentDataVersion = newDataVersion;
-            await applyLiveDataRefresh(newDataVersion);
+            clearTimeout(pendingDataRefresh);
+            pendingDataRefresh = setTimeout(() => {
+                applyLiveDataRefresh(newDataVersion);
+            }, LIVE_REFRESH_DEBOUNCE_MS);
         }
     }, (err) => {
         console.warn('Live sync listener error:', err);
@@ -385,29 +401,37 @@ function applyLiveUnlock(user) {
 }
 
 async function applyLiveDataRefresh(newDataVersion) {
-    // Invalidate caches
-    invalidateStatsCache();
-    try { localStorage.removeItem(MATCHES_CACHE_KEY); } catch { /* noop */ }
+    // Note: we intentionally do NOT call invalidateStatsCache() or clear the
+    // matches localStorage cache here. Both caches are keyed on dataVersion,
+    // so the next read will self-invalidate via the stale-version check.
+    // Proactively nuking them just forces an extra fetch even when the user
+    // isn't looking at stats/matches.
 
-    // Re-fetch matches & tournament config
-    try {
-        await loadTournamentConfig(newDataVersion);
-        const snap = await getDocs(collection(db, "matches"));
-        allMatchesData = snap.docs.filter(d => !d.id.startsWith('_')).map(d => d.data());
-        localStorage.setItem(MATCHES_CACHE_KEY, JSON.stringify({ dataVersion: newDataVersion, matches: allMatchesData }));
-    } catch (e) {
-        console.warn('Live refresh fetch failed:', e);
-        return;
+    // Only re-fetch matches + tournament config if the active tab actually
+    // needs them. Otherwise defer: the cache will refresh lazily on tab click
+    // (the dataVersion mismatch in app.js load path triggers a fresh fetch).
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    const needsMatches = ['start-tab', 'results-tab', 'wizard-tab', 'bracket-tab', 'admin-tab'].includes(activeTab);
+
+    if (needsMatches) {
+        try {
+            await loadTournamentConfig(newDataVersion);
+            const snap = await getDocs(collection(db, "matches"));
+            allMatchesData = snap.docs.filter(d => !d.id.startsWith('_')).map(d => d.data());
+            localStorage.setItem(MATCHES_CACHE_KEY, JSON.stringify({ dataVersion: newDataVersion, matches: allMatchesData }));
+        } catch (e) {
+            console.warn('Live refresh fetch failed:', e);
+            return;
+        }
+
+        // Re-apply tab visibility (tournament structure may have changed)
+        applyTabVisibility();
+        const tName = getTournamentName();
+        document.querySelector('.logo-text').textContent = tName;
+        document.title = tName;
     }
 
-    // Re-apply tab visibility (tournament structure may have changed)
-    applyTabVisibility();
-    const tName = getTournamentName();
-    document.querySelector('.logo-text').textContent = tName;
-    document.title = tName;
-
     // Refresh the visible data tab — but NEVER disrupt a user mid-tipping
-    const activeTab = document.querySelector('.tab-content.active')?.id;
     if (activeTab === 'start-tab') loadCommunityStats();
     else if (activeTab === 'results-tab') loadResults(allMatchesData);
     // wizard/bracket/special: leave alone — user may be mid-edit
