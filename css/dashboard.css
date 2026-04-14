@@ -299,6 +299,18 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .stat-card { background: var(--color-card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px var(--color-card-shadow); }
 .stat-card h3 { margin-top: 0; font-size: 1.1rem; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; }
+/* Section titles above stat-card groups — consistent typography for all
+   dashboard sections (Leaderboard, Min tipsrad, Senaste resultat, etc.) */
+.dashboard-section-title {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 18px 4px 10px;
+    letter-spacing: 0.3px;
+}
+.dashboard-left > .dashboard-section-title:first-child,
+.dashboard-right > .dashboard-section-title:first-child { margin-top: 0; }
 .stat-bar { display: flex; align-items: center; margin-bottom: 6px; font-size: 13px; }
 .stat-bar-fill { height: 20px; background: linear-gradient(90deg, var(--color-progress-from), var(--color-progress-to)); border-radius: 4px; min-width: 2px; transition: width 0.3s; display: flex; align-items: center; padding-left: 6px; color: white; font-weight: 600; font-size: 11px; }
 .stat-bar-label { min-width: 120px; font-weight: 600; display: flex; align-items: center; gap: 4px; }

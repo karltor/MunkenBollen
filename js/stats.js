@@ -124,7 +124,8 @@ export async function loadCommunityStats(prefetchedSettings) {
     html += `<div class="dashboard-left">`;
 
     // ── LEADERBOARD (top 10 + show more) ──────────
-    html += `<div class="stat-card leaderboard-card"><h3>Leaderboard</h3>`;
+    html += `<h3 class="dashboard-section-title">Leaderboard</h3>`;
+    html += `<div class="stat-card leaderboard-card">`;
     const hasGroups = hasStageType('round-robin-groups');
     const hasSpecial = hasSpecialQuestions();
     const specialConfig = getSpecialQuestionsConfig();
@@ -232,7 +233,7 @@ export async function loadCommunityStats(prefetchedSettings) {
 
     const me = users.find(u => u.userId === currentUserId);
 if (me && (me.groupPicks || me.knockoutPicks)) {
-        html += '<h3 style="margin-top:0; margin-bottom:10px;">Min tipsrad</h3>';
+        html += '<h3 class="dashboard-section-title">Min tipsrad</h3>';
         html += '<div class="stat-card">';
 
         // Check if all group stage matches have official results
@@ -478,7 +479,7 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
 
     // ── RECENT RESULTS (4 senaste) ──────────────────────────────
     if (recentResults.length > 0) {
-        html += `<h3>Senaste resultat</h3>`;
+        html += `<h3 class="dashboard-section-title">Senaste resultat</h3>`;
         recentResults.forEach(match => {
             const h = match.homeScore, a2 = match.awayScore;
             const hw = h > a2 ? 'font-weight:800;' : '', aw = a2 > h ? 'font-weight:800;' : '';
@@ -642,7 +643,7 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
     const allGroupsDone = matchDocs.length > 0 && matchDocs.every(m => results[m.id] && results[m.id].homeScore !== undefined);
     const hasKnockoutScheduled = bracket?.rounds && Object.values(bracket.rounds).some(round => round?.some(m => m.team1 && m.team2));
 
-    html += `<h3>Kommande matcher</h3>`;
+    html += `<h3 class="dashboard-section-title">Kommande matcher</h3>`;
     if (upcomingMatches.length > 0) {
         upcomingMatches.forEach(match => {
             html += `<div class="stat-card upcoming-card" style="padding:14px; margin-bottom:10px; border-left:3px solid #ffc107;">`;
@@ -722,7 +723,8 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
         if (pick) champCounts[pick] = (champCounts[pick] || 0) + 1;
     });
     if (Object.keys(champCounts).length > 0) {
-        html += `<div class="stat-card" style="margin-top:10px;"><h3>🏆 Tippade mästare</h3>`;
+        html += `<h3 class="dashboard-section-title">🏆 Tippade mästare</h3>`;
+        html += `<div class="stat-card">`;
         const totalC = Object.values(champCounts).reduce((a, b) => a + b, 0);
         Object.entries(champCounts).sort((a, b) => b[1] - a[1]).forEach(([team, count]) => {
             html += renderStatBar(team, Math.round((count / totalC) * 100));
