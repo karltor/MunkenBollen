@@ -239,6 +239,9 @@ export function renderAdminMatches(letter) {
         const awayVal = r?.awayScore ?? '';
         const isDone = homeVal !== '' && awayVal !== '';
         const overdue = !isDone && isOverdue(m.date, Date.now());
+        const clearBtn = isDone
+            ? `<button class="btn-delete-result" data-clear-match="${m.id}" title="Rensa resultat — gör matchen kommande igen">✕</button>`
+            : '<span style="width:22px;"></span>';
         html += `<div class="admin-match-row ${isDone ? 'done' : ''} ${overdue ? 'overdue' : ''}">
             <span class="admin-match-label">${m.date || ''}</span>
             <span class="admin-match-home">${f(m.homeTeam)}${m.homeTeam}</span>
@@ -246,11 +249,27 @@ export function renderAdminMatches(letter) {
                 <input type="number" min="0" class="admin-score" data-match="${m.id}" data-side="home" value="${homeVal}" placeholder="-">
                 <span class="admin-sep">–</span>
                 <input type="number" min="0" class="admin-score" data-match="${m.id}" data-side="away" value="${awayVal}" placeholder="-">
+                ${clearBtn}
             </span>
             <span class="admin-match-away">${m.awayTeam}${f(m.awayTeam)}</span>
         </div>`;
     });
     container.innerHTML = html;
+    container.querySelectorAll('[data-clear-match]').forEach(btn => {
+        btn.addEventListener('click', () => clearAdminMatchResult(btn.dataset.clearMatch, btn));
+    });
+}
+
+async function clearAdminMatchResult(matchId, btn) {
+    if (!existingResults[matchId]) return;
+    if (!confirm('Rensa resultat för denna match? Matchen blir kommande igen.')) return;
+    await withBusy(btn, async () => {
+        delete existingResults[matchId];
+        await setDoc(doc(db, "matches", "_results"), existingResults);
+        await bumpDataVersion();
+        renderAdminMatches(currentAdminGroup);
+        renderGroupButtons();
+    });
 }
 
 async function saveAdminResults() {
