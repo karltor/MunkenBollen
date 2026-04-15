@@ -10,7 +10,7 @@ import { initAdmin, checkTipsLocked } from './admin.js';
 import { initSpecialTips, setSpecialLocked } from './special-tips.js';
 import { loadResults } from './results.js';
 import { applyStoredTheme } from './admin-theme.js';
-import { loadEmailPref, showEmailPrefPopup, initSettingsTab } from './user-settings.js';
+import { loadEmailPref, showEmailPrefPopup, initSettingsTab, WELCOME_DISMISSED_KEY } from './user-settings.js';
 import { initChat, destroyChat, setChatAdmin } from './chat.js';
 import { toggleChatAdminPanel } from './chat-admin.js';
 
@@ -35,7 +35,6 @@ setTimeout(hideLoader, 5000);
 
 const ADMINS = ['karl.tornered@nyamunken.se', 'jonas.waltelius@nyamunken.se'];
 const MATCHES_CACHE_KEY = 'munkentipset_matches_cache_v1';
-const WELCOME_DISMISSED_KEY = 'munkentipset_welcome_dismissed';
 let allMatchesData = [];
 let isAdmin = false;
 let globalTipsLocked = false;
@@ -278,7 +277,12 @@ function showWelcomePopup(emailPref) {
     overlay.style.display = 'flex';
 
     function closeWelcome(dismiss) {
-        if (dismiss) localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
+        if (dismiss) {
+            localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
+            // Keep the settings toggle in sync
+            const toggle = document.getElementById('settings-welcome-toggle');
+            if (toggle) toggle.checked = false;
+        }
 
         // If email pref already set, just close
         if (emailPref) {
@@ -295,6 +299,8 @@ function showWelcomePopup(emailPref) {
         }, 350);
         // Also dismiss welcome so it won't show again
         localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
+        const toggle = document.getElementById('settings-welcome-toggle');
+        if (toggle) toggle.checked = false;
     }
 
     document.getElementById('welcome-close').addEventListener('click', () => closeWelcome(false));
