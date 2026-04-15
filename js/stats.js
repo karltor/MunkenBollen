@@ -842,7 +842,9 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
             // Fill length is relative to the top-picked team so the bar is visible even at 5%
             const fillLen = Math.max(6, Math.round((pct / maxPct) * 100));
             const bg = `linear-gradient(90deg, rgba(23,162,184,0.22), rgba(40,167,69,0.22) ${fillLen}%, transparent ${fillLen}%)`;
-            const flagHtml = teamImg(team, { size: 18, height: 14, style: 'margin:0; vertical-align:middle; flex:0 0 auto;' });
+            // Use a flagcdn-supported 4:3 size (20x15) — arbitrary sizes like
+            // 18x14 fall back to a generic image and every flag looks identical.
+            const flagHtml = teamImg(team, { size: 20, height: 15, style: 'margin:0; vertical-align:middle;' });
             html += `<div class="champ-row" style="background-image:${bg};">
                 <span class="champ-rank">${i + 1}</span>
                 <span class="champ-flag">${flagHtml}</span>
