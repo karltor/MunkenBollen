@@ -2,6 +2,7 @@ import { db } from './config.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { f } from './wizard.js';
 import { getGroupLetters, getKnockoutRounds, getFinalRound, hasStageType, isTwoLegged } from './tournament-config.js';
+import { parseMatchDate } from './scoring.js';
 let subTabsWired = false;
 
 export async function loadResults(allMatches) {
@@ -70,7 +71,6 @@ function renderGroupTables(allMatches, results) {
         teams.forEach(t => tData[t] = { name: t, pld: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 });
 
         let hasAnyResult = false;
-        let matchListHtml = '';
 
         groupMatches.forEach(m => {
             const r = results[m.id];
@@ -84,15 +84,38 @@ function renderGroupTables(allMatches, results) {
                 if (h > a) { tData[m.homeTeam].w++; tData[m.homeTeam].pts += 3; tData[m.awayTeam].l++; }
                 else if (a > h) { tData[m.awayTeam].w++; tData[m.awayTeam].pts += 3; tData[m.homeTeam].l++; }
                 else { tData[m.homeTeam].d++; tData[m.awayTeam].d++; tData[m.homeTeam].pts++; tData[m.awayTeam].pts++; }
-                const hw = h > a ? 'font-weight:700;' : '', aw = a > h ? 'font-weight:700;' : '';
-                matchListHtml += `<div style="font-size:12px; padding:3px 0; display:flex; align-items:center;">
-                    <span style="flex:1; text-align:left; ${hw}">${f(m.homeTeam)}${m.homeTeam}</span><span style="flex:0 0 auto; font-weight:700; padding:0 8px;">${h} - ${a}</span><span style="flex:1; text-align:right; ${aw}">${m.awayTeam}${f(m.awayTeam)}</span>
-                </div>`;
-            } else {
-                matchListHtml += `<div style="font-size:12px; padding:3px 0; color:#aaa; display:flex; align-items:center;">
-                    <span style="flex:1; text-align:left;">${f(m.homeTeam)}${m.homeTeam}</span><span style="flex:0 0 auto; padding:0 8px;">${m.date || '— : —'}</span><span style="flex:1; text-align:right;">${m.awayTeam}${f(m.awayTeam)}</span>
-                </div>`;
             }
+        });
+
+        const played = [], upcoming = [];
+        groupMatches.forEach(m => {
+            const r = results[m.id];
+            if (r && r.homeScore !== undefined) played.push(m);
+            else upcoming.push(m);
+        });
+        played.sort((x, y) => {
+            const dx = parseMatchDate(x.date), dy = parseMatchDate(y.date);
+            return (dx ? dx.getTime() : 0) - (dy ? dy.getTime() : 0);
+        });
+        upcoming.sort((x, y) => {
+            const dx = parseMatchDate(x.date), dy = parseMatchDate(y.date);
+            const tx = dx ? dx.getTime() : Infinity, ty = dy ? dy.getTime() : Infinity;
+            return tx - ty;
+        });
+
+        let matchListHtml = '';
+        played.forEach(m => {
+            const r = results[m.id];
+            const h = r.homeScore, a = r.awayScore;
+            const hw = h > a ? 'font-weight:700;' : '', aw = a > h ? 'font-weight:700;' : '';
+            matchListHtml += `<div style="font-size:12px; padding:3px 0; display:flex; align-items:center;">
+                <span style="flex:1; text-align:left; ${hw}">${f(m.homeTeam)}${m.homeTeam}</span><span style="flex:0 0 auto; font-weight:700; padding:0 8px;">${h} - ${a}</span><span style="flex:1; text-align:right; ${aw}">${m.awayTeam}${f(m.awayTeam)}</span>
+            </div>`;
+        });
+        upcoming.forEach(m => {
+            matchListHtml += `<div style="font-size:12px; padding:3px 0; color:#aaa; display:flex; align-items:center;">
+                <span style="flex:1; text-align:left;">${f(m.homeTeam)}${m.homeTeam}</span><span style="flex:0 0 auto; padding:0 8px;">${m.date || '— : —'}</span><span style="flex:1; text-align:right;">${m.awayTeam}${f(m.awayTeam)}</span>
+            </div>`;
         });
 
         const sorted = Object.values(tData).sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
