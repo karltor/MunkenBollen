@@ -384,9 +384,17 @@ async function renderScoringConfig() {
         groupWinner: 'Rätt gruppetta', groupRunnerUp: 'Rätt grupptvåa', groupThird: 'Rätt grupptrea',
     };
     const koRounds = getKnockoutRounds();
-    const finalRd = getFinalRound();
-    koRounds.forEach(r => {
-        labels[`ko_${r.key}`] = r === finalRd ? `Rätt ${getChampionLabel().replace(/^Ditt\s+/i, '')}` : `Rätt lag ${r.label}`;
+    const finalIdx = koRounds.length - 1;
+    // Each row awards points for teams the user picked as ADVANCING FROM the
+    // given round, i.e. reaching the next round. Label accordingly so there's
+    // no gap between "reach semifinal" and "win the tournament".
+    koRounds.forEach((r, i) => {
+        if (i === finalIdx) {
+            labels[`ko_${r.key}`] = `Rätt ${getChampionLabel().replace(/^Ditt\s+/i, '')}`;
+        } else {
+            const next = koRounds[i + 1];
+            labels[`ko_${r.key}`] = `Rätt lag till ${(next?.label || 'nästa runda').toLowerCase()}`;
+        }
     });
     let html = '<div style="display:grid; grid-template-columns: 1fr 60px; gap:4px 12px; max-width:400px;">';
     Object.entries(labels).forEach(([key, label]) => {

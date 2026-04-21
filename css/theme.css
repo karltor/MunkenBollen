@@ -58,24 +58,91 @@
     --color-table-header-text: #ffffff;
 }
 
-/* ── Dark mode: tells UA form controls to render with dark colors and patches
-   a handful of hard-coded colors that would otherwise be unreadable. The
-   color-mode JS module also sets the --color-* vars inline on :root, which
-   covers the rest of the theme. ─────────────────────────────────────────── */
-:root[data-color-mode="dark"] {
-    color-scheme: dark;
-}
-:root[data-color-mode="dark"] body {
-    color: var(--color-text);
-}
-:root[data-color-mode="dark"] .tabs .tab-btn:not(.active) {
-    color: #dcdcdc !important;
-}
+/* ── Dark mode ─────────────────────────────────────────────────────────
+   color-mode.js sets --color-* vars inline on :root for dark mode. These
+   rules patch the sprinkling of hard-coded color values across dashboard
+   styles so text stays readable on dark backgrounds. Specificity matches
+   the original rules so they actually override them.
+   ──────────────────────────────────────────────────────────────────── */
+:root[data-color-mode="dark"] { color-scheme: dark; }
+:root[data-color-mode="dark"] body { color: var(--color-text); }
+
+/* Tab rows (main + sub) */
+:root[data-color-mode="dark"] .tabs .tab-btn:not(.active),
+:root[data-color-mode="dark"] .results-sub-btn:not(.active),
+:root[data-color-mode="dark"] .admin-nav-btn:not(.active) { color: #dcdcdc !important; }
+:root[data-color-mode="dark"] .admin-nav-btn:hover { background: #2a2a2a; color: #fff; }
+
+/* Dashboard section titles (Leaderboard, Min tipsrad, Kommande matcher, Tippade mästare …) */
+:root[data-color-mode="dark"] .dashboard-section-title { color: var(--color-text); }
+
+/* Stat cards */
+:root[data-color-mode="dark"] .stat-card { color: var(--color-text); }
 :root[data-color-mode="dark"] .stat-card h3 {
     color: var(--color-text);
     border-bottom-color: color-mix(in srgb, var(--color-text) 18%, transparent);
 }
-:root[data-color-mode="dark"] .admin-nav-btn,
-:root[data-color-mode="dark"] .results-sub-btn {
-    color: #dcdcdc;
-}
+:root[data-color-mode="dark"] .stat-card p,
+:root[data-color-mode="dark"] .stat-card label,
+:root[data-color-mode="dark"] .stat-card span { color: inherit; }
+:root[data-color-mode="dark"] .stat-card table { color: var(--color-text); }
+:root[data-color-mode="dark"] .stat-card a { color: #7cc1ff; }
+
+/* Group tables (match results + leaderboard) */
+:root[data-color-mode="dark"] .group-table-card { background: var(--color-card-bg); border-color: var(--color-card-border); }
+:root[data-color-mode="dark"] .group-table { color: var(--color-text); }
+:root[data-color-mode="dark"] .group-table td,
+:root[data-color-mode="dark"] .group-table th { border-bottom-color: color-mix(in srgb, var(--color-text) 12%, transparent); }
+
+/* Min tipsrad / my-tips-table */
+:root[data-color-mode="dark"] .my-tips-table { color: var(--color-text); }
+:root[data-color-mode="dark"] .my-tips-table tr + tr td { border-top-color: color-mix(in srgb, var(--color-text) 12%, transparent); }
+:root[data-color-mode="dark"] .mtt-label { color: color-mix(in srgb, var(--color-text) 70%, transparent); }
+:root[data-color-mode="dark"] .mtt-sep { color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+
+/* Tippade mästare */
+:root[data-color-mode="dark"] .champ-name { color: var(--color-text); }
+:root[data-color-mode="dark"] .champ-pct { color: var(--color-text); }
+:root[data-color-mode="dark"] .champ-rank { color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+
+/* Kommande matcher / user-tip-card summaries */
+:root[data-color-mode="dark"] .user-tip-card .tip-summary { color: color-mix(in srgb, var(--color-text) 70%, transparent); }
+
+/* Casual match row / wizard */
+:root[data-color-mode="dark"] .casual-match-date,
+:root[data-color-mode="dark"] .casual-match-score { color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+:root[data-color-mode="dark"] .casual-team-card { background: var(--color-card-bg); border-color: var(--color-card-border); }
+:root[data-color-mode="dark"] .mode-card { background: var(--color-card-bg); border-color: var(--color-card-border); color: var(--color-text); }
+:root[data-color-mode="dark"] .mode-card p,
+:root[data-color-mode="dark"] .wizard-mode-label { color: color-mix(in srgb, var(--color-text) 70%, transparent); }
+
+/* Sverigetipset / special questions */
+:root[data-color-mode="dark"] .sq-question-card { background: var(--color-card-bg); border-color: var(--color-card-border); box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+:root[data-color-mode="dark"] .sq-question-text { color: var(--color-text); }
+:root[data-color-mode="dark"] .sq-question-pts { background: #2a2a2a; color: #cfcfcf; }
+:root[data-color-mode="dark"] .sq-option-btn { background: #2a2a2a; color: var(--color-text); border-color: var(--color-card-border); }
+:root[data-color-mode="dark"] .sq-numeric-input { background: #2a2a2a; color: var(--color-text); border-color: var(--color-card-border); }
+:root[data-color-mode="dark"] .sq-correct-answer { color: color-mix(in srgb, var(--color-text) 75%, transparent); }
+
+/* Jämför tipsare / compare */
+:root[data-color-mode="dark"] #comparison-table-container,
+:root[data-color-mode="dark"] #comparison-table-container td,
+:root[data-color-mode="dark"] #comparison-table-container th { color: var(--color-text); }
+:root[data-color-mode="dark"] .compare-team-name,
+:root[data-color-mode="dark"] .compare-match-teams { color: var(--color-text); }
+:root[data-color-mode="dark"] .compare-team-sep,
+:root[data-color-mode="dark"] .compare-match-date { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+
+/* Settings toggles and radios */
+:root[data-color-mode="dark"] .settings-toggle-label { color: var(--color-text); }
+:root[data-color-mode="dark"] .settings-radio { background: var(--color-card-bg); color: var(--color-text); border-color: var(--color-card-border); }
+
+/* Admin panel cards */
+:root[data-color-mode="dark"] .admin-card { background: var(--color-card-bg); color: var(--color-text); border-color: var(--color-card-border); }
+:root[data-color-mode="dark"] .admin-card h3,
+:root[data-color-mode="dark"] .admin-section h4 { color: var(--color-text); }
+
+/* Welcome popup is theme-controlled but hover backgrounds inside cards are
+   set to rgba(255,255,255,x) or #f0f0f0 — these mostly stay fine on the
+   gradient bg so we leave them alone. */
+

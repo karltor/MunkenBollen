@@ -62,9 +62,10 @@ function buildActiveRules(scoring) {
         rules.push({ label: 'Rätt grupptrea', desc: 'Det lag du tippade som grupptrea slutade trea.', pts: scoring.groupThird });
     }
 
-    // Knockout: non-final rounds award per team that advanced to that round.
-    // The final round instead awards for picking the actual champion — label it
-    // with the tournament's champion label so it reads "Rätt VM-Guld 2026".
+    // Knockout: each ko_<round> row awards points for teams the user picked
+    // as advancing PAST that round — i.e. reaching the next one. Label the
+    // row with the next round's name so the progression reads naturally:
+    // åttondelsfinal → kvartsfinal → semifinal → final → turneringsvinnare.
     const koRounds = getKnockoutRounds();
     const finalIdx = koRounds.length - 1;
     koRounds.forEach((r, i) => {
@@ -77,9 +78,10 @@ function buildActiveRules(scoring) {
                 pts,
             });
         } else {
+            const nextLabel = (koRounds[i + 1]?.label || 'nästa runda').toLowerCase();
             rules.push({
-                label: `Rätt lag till ${r.label.toLowerCase()}`,
-                desc: 'Per lag du tippade som tog sig vidare till denna runda.',
+                label: `Rätt lag till ${nextLabel}`,
+                desc: `Per lag du tippade som tog sig vidare till ${nextLabel}.`,
                 pts,
             });
         }
