@@ -605,64 +605,48 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
             const winnerOnlyPts = scoring.matchResult || 0;
 
             // My tip row
-            if (me) {
-                if (!match._isKnockout) {
-                    const myTip = me.matchTips[match.matchId];
-                    if (myTip) {
-                        const myPts = calcTipPoints(myTip.homeScore, myTip.awayScore, h, a2);
-                        const tipColor = pointsColor(myPts, maxScorePts);
+            if (me && !match._isKnockout) {
+                const myTip = me.matchTips[match.matchId];
+                if (myTip) {
+                    const myPts = calcTipPoints(myTip.homeScore, myTip.awayScore, h, a2);
+                    const tipColor = pointsColor(myPts, maxScorePts);
+                    html += renderRow(
+                        `<div style="font-size:13px; color:${tipColor}; font-weight:700;">Ditt tips: ${myTip.homeScore} - ${myTip.awayScore}</div>`,
+                        pointsBadge(myPts, maxScorePts),
+                        { mine: true }
+                    );
+                }
+            } else if (me && match._isKnockout && me.knockoutPicks && match._winner) {
+                // In knockout, only advancement is scored (everyone who picked
+                // the winner gets the round's points, regardless of per-leg score
+                // predictions). Show "Tippat vidare" on the deciding leg.
+                const roundKey = match._koRoundKey;
+                const leg = match._koLeg;
+                if (leg === 2 || leg === 0) {
+                    const picks = typeof me.knockoutPicks[roundKey] === 'string' ? [me.knockoutPicks[roundKey]] : (me.knockoutPicks[roundKey] || []);
+                    const origTeam1 = leg === 2 ? match.awayTeam : match.homeTeam;
+                    const origTeam2 = leg === 2 ? match.homeTeam : match.awayTeam;
+                    const picked = picks.find(t => t === origTeam1 || t === origTeam2);
+                    if (picked) {
+                        const correct = picked === match._winner;
+                        const koMax = scoring[`ko_${roundKey}`] || 0;
+                        const advPts = correct ? koMax : 0;
+                        const advColor = pointsColor(advPts, koMax);
                         html += renderRow(
-                            `<div style="font-size:13px; color:${tipColor}; font-weight:700;">Ditt tips: ${myTip.homeScore} - ${myTip.awayScore}</div>`,
-                            pointsBadge(myPts, maxScorePts),
+                            `<div style="font-size:13px; color:${advColor}; font-weight:700;">Tippat vidare: ${f(picked)}${picked}</div>`,
+                            pointsBadge(advPts, koMax),
                             { mine: true }
                         );
-                    }
-                } else if (me.knockoutScores || me.knockoutPicks) {
-                    const roundKey = match._koRoundKey;
-                    const mi = match._koMatchIdx;
-                    const leg = match._koLeg;
-                    const tip = me.knockoutScores?.[roundKey]?.[mi];
-
-                    // Show per-leg score comparison
-                    if (tip) {
-                        let tipH, tipA;
-                        if (leg === 1) { tipH = tip.score1; tipA = tip.score2; }
-                        else if (leg === 2) { tipH = tip.score1_leg2; tipA = tip.score2_leg2; }
-                        if (tipH != null && tipA != null) {
-                            const myPts = calcTipPoints(tipH, tipA, h, a2);
-                            const tipColor = pointsColor(myPts, maxScorePts);
-                            html += renderRow(
-                                `<div style="font-size:13px; color:${tipColor}; font-weight:700;">Ditt tips: ${tipH} – ${tipA}</div>`,
-                                pointsBadge(myPts, maxScorePts),
-                                { mine: true }
-                            );
-                        }
-                    }
-
-                    // Show advancement pick (on leg 2 or single-leg, when winner is known)
-                    if (me.knockoutPicks && match._winner && (leg === 2 || leg === 0)) {
-                        const picks = typeof me.knockoutPicks[roundKey] === 'string' ? [me.knockoutPicks[roundKey]] : (me.knockoutPicks[roundKey] || []);
-                        const origTeam1 = leg === 2 ? match.awayTeam : match.homeTeam;
-                        const origTeam2 = leg === 2 ? match.homeTeam : match.awayTeam;
-                        const picked = picks.find(t => t === origTeam1 || t === origTeam2);
-                        if (picked) {
-                            const correct = picked === match._winner;
-                            const koMax = scoring[`ko_${roundKey}`] || 0;
-                            const advPts = correct ? koMax : 0;
-                            const advColor = pointsColor(advPts, koMax);
-                            html += renderRow(
-                                `<div style="font-size:13px; color:${advColor}; font-weight:700;">Tippat vidare: ${f(picked)}${picked}</div>`,
-                                pointsBadge(advPts, koMax),
-                                { mine: true }
-                            );
-                        }
                     }
                 }
             }
 
-            // Tippers analysis — build exact + winner lists, then render each with its points badge
-            const exactTippers = [], winnerTippers = [];
+            // Tippers analysis — two variants:
+            //   • Group-stage: count exact + right-winner tippers by score
+            //   • Knockout: count who picked the advancing team (per-leg scores
+            //     don't score, so summarising by score would be misleading)
             if (!match._isKnockout) {
+                const exactTippers = [], winnerTippers = [];
                 users.forEach(u => {
                     if (u.userId === currentUserId) return;
                     const tip = u.matchTips[match.matchId];
@@ -670,33 +654,30 @@ if (me && (me.groupPicks || me.knockoutPicks)) {
                     if (tip.homeScore === h && tip.awayScore === a2) exactTippers.push(u.name);
                     else if (sign(tip.homeScore - tip.awayScore) === sign(h - a2)) winnerTippers.push(u.name);
                 });
-            } else {
+                if (exactTippers.length > 0) {
+                    html += renderRow(tippersLineInner(exactTippers, 'tippade exakt rätt', pointsColor(maxScorePts, maxScorePts)), pointsBadge(maxScorePts, maxScorePts));
+                }
+                if (winnerTippers.length > 0) {
+                    html += renderRow(tippersLineInner(winnerTippers, 'tippade rätt vinnare', pointsColor(winnerOnlyPts, maxScorePts)), pointsBadge(winnerOnlyPts, maxScorePts));
+                }
+                if (exactTippers.length === 0 && winnerTippers.length === 0) {
+                    html += `<div style="font-size:12px; color:#999; margin-top:4px; text-align:center;">Ingen annan tippade rätt</div>`;
+                }
+            } else if (match._winner && (match._koLeg === 2 || match._koLeg === 0)) {
                 const roundKey = match._koRoundKey;
-                const mi = match._koMatchIdx;
-                const leg = match._koLeg;
+                const koMax = scoring[`ko_${roundKey}`] || 0;
+                const advancers = [];
                 users.forEach(u => {
                     if (u.userId === currentUserId) return;
-                    const tip = u.knockoutScores?.[roundKey]?.[mi];
-                    if (tip) {
-                        let tipH, tipA;
-                        if (leg === 1) { tipH = tip.score1; tipA = tip.score2; }
-                        else if (leg === 2) { tipH = tip.score1_leg2; tipA = tip.score2_leg2; }
-                        else { tipH = tip.score1; tipA = tip.score2; }
-                        if (tipH != null && tipA != null) {
-                            if (tipH === h && tipA === a2) exactTippers.push(u.name);
-                            else if (sign(tipH - tipA) === sign(h - a2)) winnerTippers.push(u.name);
-                        }
-                    }
+                    if (!u.knockoutPicks) return;
+                    const picks = typeof u.knockoutPicks[roundKey] === 'string' ? [u.knockoutPicks[roundKey]] : (u.knockoutPicks[roundKey] || []);
+                    if (picks.includes(match._winner)) advancers.push(u.name);
                 });
-            }
-            if (exactTippers.length > 0) {
-                html += renderRow(tippersLineInner(exactTippers, 'tippade exakt rätt', pointsColor(maxScorePts, maxScorePts)), pointsBadge(maxScorePts, maxScorePts));
-            }
-            if (winnerTippers.length > 0) {
-                html += renderRow(tippersLineInner(winnerTippers, 'tippade rätt vinnare', pointsColor(winnerOnlyPts, maxScorePts)), pointsBadge(winnerOnlyPts, maxScorePts));
-            }
-            if (exactTippers.length === 0 && winnerTippers.length === 0) {
-                html += `<div style="font-size:12px; color:#999; margin-top:4px; text-align:center;">Ingen annan tippade rätt</div>`;
+                if (advancers.length > 0) {
+                    html += renderRow(tippersLineInner(advancers, `tippade ${match._winner} vidare`, pointsColor(koMax, koMax)), pointsBadge(koMax, koMax));
+                } else {
+                    html += `<div style="font-size:12px; color:#999; margin-top:4px; text-align:center;">Ingen annan tippade rätt vidare</div>`;
+                }
             }
 
             html += `</div>`;
