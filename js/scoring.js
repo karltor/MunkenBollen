@@ -1,5 +1,5 @@
 import { f } from './wizard.js';
-import { getGroupLetters, getKnockoutRounds, getGroupStageConfig, getRoundUserKey, getTournamentYear, isTwoLegged, getSpecialQuestionsConfig } from './tournament-config.js';
+import { getGroupLetters, getKnockoutRounds, getGroupStageConfig, getRoundUserKey, getTournamentYear, getSpecialQuestionsConfig } from './tournament-config.js';
 
 // Build default scoring dynamically from tournament config
 export function buildDefaultScoring() {
@@ -136,43 +136,11 @@ export function calcLeaderboard(users, results, bracket, scoring, officialGroupS
             });
         }
 
-        // Score knockout per-leg match predictions
-        if (u.knockoutScores && bracket?.rounds) {
-            koRounds.forEach(round => {
-                const matches = bracket.rounds[round.adminKey] || [];
-                const userScores = u.knockoutScores[round.key] || [];
-                const twoLeg = isTwoLegged(round.key);
-
-                matches.forEach((m, mi) => {
-                    const tip = userScores[mi];
-                    if (!tip) return;
-
-                    // Leg 1 scoring
-                    if (m.score1 !== undefined && tip.score1 != null && tip.score2 != null) {
-                        const tipSign = sign(tip.score1 - tip.score2);
-                        const realSign = sign(m.score1 - m.score2);
-                        if (tipSign === realSign) { koPts += scoring.matchResult; detail.matchResult += scoring.matchResult; }
-                        if (tip.score1 === m.score1) { koPts += scoring.matchHomeGoals; detail.matchGoals += scoring.matchHomeGoals; }
-                        if (tip.score2 === m.score2) { koPts += scoring.matchAwayGoals; detail.matchGoals += scoring.matchAwayGoals; }
-                        if (scoring.exactScore > 0 && tip.score1 === m.score1 && tip.score2 === m.score2) {
-                            koPts += scoring.exactScore; detail.exactScore += scoring.exactScore;
-                        }
-                    }
-
-                    // Leg 2 scoring
-                    if (twoLeg && m.score1_leg2 !== undefined && tip.score1_leg2 != null && tip.score2_leg2 != null) {
-                        const tipSign = sign(tip.score1_leg2 - tip.score2_leg2);
-                        const realSign = sign(m.score1_leg2 - m.score2_leg2);
-                        if (tipSign === realSign) { koPts += scoring.matchResult; detail.matchResult += scoring.matchResult; }
-                        if (tip.score1_leg2 === m.score1_leg2) { koPts += scoring.matchHomeGoals; detail.matchGoals += scoring.matchHomeGoals; }
-                        if (tip.score2_leg2 === m.score2_leg2) { koPts += scoring.matchAwayGoals; detail.matchGoals += scoring.matchAwayGoals; }
-                        if (scoring.exactScore > 0 && tip.score1_leg2 === m.score1_leg2 && tip.score2_leg2 === m.score2_leg2) {
-                            koPts += scoring.exactScore; detail.exactScore += scoring.exactScore;
-                        }
-                    }
-                });
-            });
-        }
+        // Knockout used to also award per-leg match points (1X2 + goals + exact)
+        // on top of advancement points — that meant detailed-mode tippers could
+        // pick up 5 extra pts per leg over casual tippers. That violates the
+        // "everyone gets the same points in knockout, based on advancement only"
+        // rule, so per-leg match scoring is intentionally not applied here.
 
         // Score special questions
         let specialPts = 0;

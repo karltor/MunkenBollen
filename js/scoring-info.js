@@ -41,16 +41,16 @@ function buildActiveRules(scoring) {
     const rules = [];
 
     if (scoring.matchResult > 0) {
-        rules.push({ label: 'Rätt 1X2', desc: 'Du tippade rätt vinnare eller oavgjort i en match.', pts: scoring.matchResult });
+        rules.push({ label: 'Rätt 1X2 (gruppspel)', desc: 'Du tippade rätt vinnare eller oavgjort i en gruppspelsmatch. I slutspelet räknas endast avancemangspoäng.', pts: scoring.matchResult });
     }
     if (scoring.matchHomeGoals > 0) {
-        rules.push({ label: 'Rätt antal hemmamål', desc: 'Antal mål du tippade på hemmalaget stämmer.', pts: scoring.matchHomeGoals });
+        rules.push({ label: 'Rätt antal hemmamål (gruppspel)', desc: 'Antal mål du tippade på hemmalaget i en gruppspelsmatch stämmer.', pts: scoring.matchHomeGoals });
     }
     if (scoring.matchAwayGoals > 0) {
-        rules.push({ label: 'Rätt antal bortamål', desc: 'Antal mål du tippade på bortalaget stämmer.', pts: scoring.matchAwayGoals });
+        rules.push({ label: 'Rätt antal bortamål (gruppspel)', desc: 'Antal mål du tippade på bortalaget i en gruppspelsmatch stämmer.', pts: scoring.matchAwayGoals });
     }
     if (scoring.exactScore > 0) {
-        rules.push({ label: 'Exakt resultat (bonus)', desc: 'Extra bonus när hela matchresultatet är exakt rätt.', pts: scoring.exactScore });
+        rules.push({ label: 'Exakt resultat (gruppspel, bonus)', desc: 'Extra bonus när hela matchresultatet är exakt rätt i en gruppspelsmatch.', pts: scoring.exactScore });
     }
     if (scoring.groupWinner > 0) {
         rules.push({ label: 'Rätt gruppetta', desc: 'Det lag du tippade som gruppetta vann gruppen.', pts: scoring.groupWinner });
