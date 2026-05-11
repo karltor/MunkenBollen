@@ -12,6 +12,12 @@ export function invalidateStatsCache() {
     try { localStorage.removeItem(STATS_CACHE_KEY); } catch { /* noop */ }
 }
 
+// Admins manage the Prispott, so they always see the 💰 markers even if they
+// aren't paying participants themselves. Set once from app.js after the auth
+// check resolves who's an admin.
+let _viewerIsAdmin = false;
+export function setStatsViewerIsAdmin(v) { _viewerIsAdmin = !!v; }
+
 // Render a name with two variants: full on desktop, first-name + initials on
 // mobile (e.g. "Linnea Meijer" → "Linnea M", "Vanessa Perez Ferrante" →
 // "Vanessa P F"). CSS media query toggles which span is visible.
@@ -124,9 +130,10 @@ export async function loadCommunityStats(prefetchedSettings) {
 
     const currentUserId = auth.currentUser?.uid;
     // The 💰 marker is a private signal between pot participants about who
-    // they're competing for prize money with. Only shown to viewers who are
-    // themselves in the pot; otherwise it's hidden entirely.
-    const viewerIsPotMember = users.some(u => u.userId === currentUserId && u.potMember);
+    // they're competing for prize money with. Shown to viewers who are
+    // themselves in the pot, plus admins (who run the Prispott). Hidden from
+    // everyone else.
+    const viewerIsPotMember = _viewerIsAdmin || users.some(u => u.userId === currentUserId && u.potMember);
     const potMark = (isPot) => (viewerIsPotMember && isPot) ? ' <span title="I prispotten" style="font-size:0.85em;">💰</span>' : '';
     const playedMatches = Object.entries(results).filter(([, r]) => r.homeScore !== undefined);
 

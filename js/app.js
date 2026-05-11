@@ -4,7 +4,7 @@ import { collection, getDocs, doc, getDoc, setDoc, onSnapshot } from "https://ww
 import { loadTournamentConfig, getTournamentName, getLogo, hasStageType, getSpecialQuestionsConfig } from './tournament-config.js';
 import { initWizard, getGroupPicks, setWizardLocked } from './wizard.js';
 import { initBracket, setBracketLocked } from './bracket.js';
-import { loadCommunityStats } from './stats.js';
+import { loadCommunityStats, setStatsViewerIsAdmin } from './stats.js';
 import { showAllTips } from './compare.js';
 import { renderScoringInfoTab, invalidateScoringInfoCache } from './scoring-info.js';
 import { initAdmin, checkTipsLocked } from './admin.js';
@@ -154,9 +154,11 @@ document.getElementById('admin-btn').addEventListener('click', () => {
     document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
 
     if (isShown) {
-        // Go back to start
+        // Go back to start — refresh the leaderboard so any pot changes made in
+        // the admin panel (e.g. a newly-marked 💰 participant) show up.
         document.querySelector('.tab-btn[data-target="start-tab"]').classList.add('active');
         document.getElementById('start-tab').classList.add('active');
+        loadCommunityStats();
     } else {
         adminTab.classList.add('active');
     }
@@ -173,6 +175,7 @@ document.getElementById('settings-btn').addEventListener('click', () => {
     if (isShown) {
         document.querySelector('.tab-btn[data-target="start-tab"]').classList.add('active');
         document.getElementById('start-tab').classList.add('active');
+        loadCommunityStats();
     } else {
         settingsTab.classList.add('active');
         initSettingsTab();
@@ -220,6 +223,7 @@ onAuthStateChanged(auth, async (user) => {
     // Admin check
     isAdmin = ADMINS.includes(email);
     setChatAdmin(isAdmin);
+    setStatsViewerIsAdmin(isAdmin);
     if (isAdmin) {
         document.getElementById('admin-btn').style.display = 'inline-block';
         document.getElementById('chat-admin-btn').addEventListener('click', () => toggleChatAdminPanel());
